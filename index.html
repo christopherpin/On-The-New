@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beyond the Plaque — An Archive for New York's Unlandmarked Buildings</title>
+<title>On The New — An Archive for New York's Unlandmarked Buildings</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,450;9..144,600;9..144,700&family=Spectral:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -76,6 +76,67 @@
     background-size: 64px 64px;
     opacity:0.5;
     mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+
+  /* ---------------- LANDING / SPLASH ---------------- */
+  body.locked{ overflow:hidden; height:100vh; }
+  #landing{
+    position:fixed; inset:0; z-index:999;
+    background:var(--paper);
+    display:flex; align-items:center; justify-content:center;
+    transition: opacity .7s ease, visibility .7s ease;
+  }
+  #landing.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+  .landing-inner{
+    width:100%; max-width:640px;
+    padding:0 30px;
+  }
+  .landing-eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11.5px; letter-spacing:0.16em; text-transform:uppercase;
+    color:var(--verdigris); text-align:center; margin-bottom:26px;
+  }
+  .landing-title{
+    font-family:'Fraunces', serif; font-weight:600;
+    font-size:clamp(44px, 8vw, 78px);
+    text-align:center; line-height:1.0; letter-spacing:-0.01em;
+    margin-bottom:18px;
+  }
+  .landing-title em{ font-style:italic; font-weight:450; color:var(--brownstone); }
+  .landing-sub{
+    text-align:center; color:var(--ink-soft); font-size:16.5px;
+    max-width:44ch; margin:0 auto 46px;
+  }
+  .title-block{
+    border-top:1.5px solid var(--ink);
+    border-bottom:1.5px solid var(--ink);
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .title-block .tb-cell{
+    padding:14px 18px;
+    border-right:1px solid var(--line-hair);
+    font-family:'JetBrains Mono', monospace;
+  }
+  .title-block .tb-cell:last-child{ border-right:none; }
+  .title-block .tb-label{ font-size:9.5px; letter-spacing:0.1em; color:var(--ink-soft); margin-bottom:5px; }
+  .title-block .tb-value{ font-size:12px; color:var(--ink); }
+  .landing-enter{
+    display:flex; justify-content:center; margin-top:40px;
+  }
+  .enter-btn{
+    all:unset; cursor:pointer;
+    font-family:'JetBrains Mono', monospace; font-size:12.5px;
+    letter-spacing:0.1em; text-transform:uppercase;
+    border:1.5px solid var(--ink); color:var(--ink);
+    padding:16px 34px; border-radius:2px;
+    transition:background .25s ease, color .25s ease;
+  }
+  .enter-btn:hover{ background:var(--ink); color:var(--paper); }
+  @media (max-width:520px){
+    .title-block{ grid-template-columns:1fr; }
+    .title-block .tb-cell{ border-right:none; border-bottom:1px solid var(--line-hair); }
+    .title-block .tb-cell:last-child{ border-bottom:none; }
   }
 
   header.top{
@@ -457,11 +518,20 @@
   }
 </style>
 </head>
-<body>
+<body class="locked">
+<div id="landing">
+  <div class="landing-inner">
+    <h1 class="landing-title">On The<br><em>New</em></h1>
+    <div class="landing-enter">
+      <button class="enter-btn" id="enter-btn">Open the file →</button>
+    </div>
+  </div>
+</div>
+
 <div class="grain-bg"></div>
 
 <header class="top">
-  <div class="wordmark">Beyond the <span>Plaque</span></div>
+  <div class="wordmark">On The <span>New</span></div>
   <nav class="top-nav">
     <a href="#process">The Process</a>
     <a href="#inspector">The Building</a>
@@ -474,9 +544,9 @@
 <section class="hero">
   <div class="wrap hero-grid">
     <div>
-      <div class="eyebrow">A research prototype · New York City</div>
+      <div class="eyebrow">A research prototype · pilot neighborhood: Washington Heights</div>
       <h1>Every landmark<br> plaque tells a story.<br><em>Most buildings never get one.</em></h1>
-      <p class="lede">Beyond the Plaque is a proposed living archive of New York City's architecture — designated and undesignated alike. It documents the cornices, ironwork, and craft of buildings that fall outside a slow, selective, and necessarily limited legal process.</p>
+      <p class="lede">On The New is a proposed living archive of New York City's architecture — designated and undesignated alike. It documents the cornices, ironwork, and craft of buildings that fall outside a slow, selective, and necessarily limited legal process.</p>
       <div style="display:flex; gap:14px; flex-wrap:wrap;">
         <a href="#inspector" class="btn solid">Inspect a facade ↓</a>
         <a href="#cta" class="btn ghost">See the funding ask</a>
@@ -787,7 +857,7 @@
 
       <div class="gap-copy">
         <p><strong>Legal designation was never meant to be a complete record</strong> — it's a protective status, reserved for buildings that clear a high, deliberately narrow bar. Most of the city's architecture, including plenty of it worth remembering, will never clear that bar and was never surveyed in the first place.</p>
-        <p>Beyond the Plaque proposes an open, ongoing archive that runs <strong>alongside</strong> the LPC process rather than in competition with it — documenting the cornice details, ironwork, materials, and human stories of buildings whether or not they ever reach a Commission vote.</p>
+        <p>On The New proposes an open, ongoing archive that runs <strong>alongside</strong> the LPC process rather than in competition with it — documenting the cornice details, ironwork, materials, and human stories of buildings whether or not they ever reach a Commission vote.</p>
         <div class="pillars">
           <div class="pillar">
             <h4>Document</h4>
@@ -817,8 +887,8 @@
         <div class="ask-item">
           <span class="mk">→</span>
           <div>
-            <h4>A one-borough pilot survey</h4>
-            <p>Twelve months of fieldwork documenting a single under-recorded neighborhood, chosen with local preservation groups.</p>
+            <h4>A Washington Heights pilot survey</h4>
+            <p>Twelve months of fieldwork documenting the neighborhood's rowhouses and apartment buildings, in partnership with local preservation groups.</p>
           </div>
         </div>
         <div class="ask-item">
@@ -839,8 +909,8 @@
 
       <div class="contact-card">
         <p class="lead">This site is a proof of concept built to accompany a research funding proposal. We'd welcome the chance to walk through it in more detail.</p>
-        <a href="mailto:hello@beyondtheplaque.org" class="btn solid">Get in touch ↗</a>
-        <div class="contact-note">hello@beyondtheplaque.org — replace with your project's contact before sharing</div>
+        <a href="mailto:hello@onthenew.org" class="btn solid">Get in touch ↗</a>
+        <div class="contact-note">hello@onthenew.org — replace with your project's contact before sharing</div>
       </div>
     </div>
   </div>
@@ -848,7 +918,7 @@
 
 <footer>
   <div class="wrap" style="display:flex; justify-content:space-between; width:100%;">
-    <span>BEYOND THE PLAQUE — PROTOTYPE, 2026</span>
+    <span>ON THE NEW — PROTOTYPE, 2026</span>
     <span>PROCESS DATA: NYC.GOV/SITE/LPC</span>
   </div>
 </footer>
@@ -881,6 +951,14 @@
       risk: "RISK: erased in the name of authenticity"
     }
   };
+
+  // landing / splash page
+  const landing = document.getElementById('landing');
+  const enterBtn = document.getElementById('enter-btn');
+  enterBtn.addEventListener('click', ()=>{
+    landing.classList.add('hidden');
+    document.body.classList.remove('locked');
+  });
 
   const flowData = {
     cornice: {
