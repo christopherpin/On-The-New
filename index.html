@@ -3,1121 +3,559 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>On The New — An Archive for New York's Unlandmarked Buildings</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,450;9..144,600;9..144,700&family=Spectral:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<title>On The New</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper:#E7E1D2;
-    --paper-dim:#DCD5C3;
-    --ink:#211D17;
-    --ink-soft:#4A4438;
-    --blueprint:#2C4A5E;
-    --blueprint-line: rgba(44,74,94,0.35);
-    --verdigris:#4C7466;
-    --verdigris-dim: rgba(76,116,102,0.18);
-    --brass:#A9843C;
-    --brownstone:#7C4230;
-    --line-hair: rgba(33,29,23,0.14);
+    --yellow:#F5C518;
+    --black:#0A0A0A;
+    --canary:#FFE135;
   }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  html{scroll-behavior:smooth;}
-  body{
-    background:var(--paper);
-    color:var(--ink);
-    font-family:'Spectral', serif;
-    font-size:17px;
-    line-height:1.6;
-    overflow-x:hidden;
-  }
-  ::selection{ background:var(--verdigris); color:var(--paper); }
-  h1,h2,h3{
-    font-family:'Fraunces', serif;
-    font-weight:600;
-    letter-spacing:-0.01em;
-    color:var(--ink);
-  }
-  .mono{
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html, body{
+    width:100%; height:100%;
+    overflow:hidden; /* the grid page is a pannable canvas, not a scrolling document */
+    background:var(--black);
     font-family:'JetBrains Mono', monospace;
-    letter-spacing:0.03em;
-  }
-  .eyebrow{
-    font-family:'JetBrains Mono', monospace;
-    font-size:12px;
-    letter-spacing:0.16em;
-    text-transform:uppercase;
-    color:var(--verdigris);
-    display:flex;
-    align-items:center;
-    gap:10px;
-  }
-  .eyebrow::before{
-    content:"";
-    width:22px; height:1px;
-    background:var(--verdigris);
-    display:inline-block;
-  }
-  .wrap{
-    max-width:1180px;
-    margin:0 auto;
-    padding:0 40px;
-  }
-  a{color:inherit;}
-  img{max-width:100%; display:block;}
-
-  /* subtle grid texture across whole page */
-  .grain-bg{
-    position:fixed; inset:0;
-    pointer-events:none;
-    z-index:0;
-    background-image:
-      linear-gradient(var(--line-hair) 1px, transparent 1px),
-      linear-gradient(90deg, var(--line-hair) 1px, transparent 1px);
-    background-size: 64px 64px;
-    opacity:0.5;
-    mask-image: radial-gradient(ellipse 90% 60% at 50% 0%, black 40%, transparent 90%);
   }
 
-  /* ---------------- LANDING / SPLASH ---------------- */
-  body.locked{ overflow:hidden; height:100vh; }
+  /* ---------------- LANDING ---------------- */
   #landing{
-    position:fixed; inset:0; z-index:999;
-    background:var(--paper);
+    position:fixed; inset:0; z-index:20;
+    background:var(--yellow);
     display:flex; align-items:center; justify-content:center;
-    transition: opacity .7s ease, visibility .7s ease;
+    transition: opacity .6s ease, visibility .6s ease;
   }
   #landing.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
-  .landing-inner{
-    width:100%; max-width:640px;
-    padding:0 30px;
-  }
-  .landing-eyebrow{
-    font-family:'JetBrains Mono', monospace;
-    font-size:11.5px; letter-spacing:0.16em; text-transform:uppercase;
-    color:var(--verdigris); text-align:center; margin-bottom:26px;
-  }
+
   .landing-title{
-    font-family:'Fraunces', serif; font-weight:600;
-    font-size:clamp(44px, 8vw, 78px);
-    text-align:center; line-height:1.0; letter-spacing:-0.01em;
-    margin-bottom:18px;
-  }
-  .landing-title em{ font-style:italic; font-weight:450; color:var(--brownstone); }
-  .landing-sub{
-    text-align:center; color:var(--ink-soft); font-size:16.5px;
-    max-width:44ch; margin:0 auto 46px;
-  }
-  .title-block{
-    border-top:1.5px solid var(--ink);
-    border-bottom:1.5px solid var(--ink);
-    display:grid;
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .title-block .tb-cell{
-    padding:14px 18px;
-    border-right:1px solid var(--line-hair);
-    font-family:'JetBrains Mono', monospace;
-  }
-  .title-block .tb-cell:last-child{ border-right:none; }
-  .title-block .tb-label{ font-size:9.5px; letter-spacing:0.1em; color:var(--ink-soft); margin-bottom:5px; }
-  .title-block .tb-value{ font-size:12px; color:var(--ink); }
-  .landing-enter{
-    display:flex; justify-content:center; margin-top:40px;
-  }
-  .enter-btn{
-    all:unset; cursor:pointer;
-    font-family:'JetBrains Mono', monospace; font-size:12.5px;
-    letter-spacing:0.1em; text-transform:uppercase;
-    border:1.5px solid var(--ink); color:var(--ink);
-    padding:16px 34px; border-radius:2px;
-    transition:background .25s ease, color .25s ease;
-  }
-  .enter-btn:hover{ background:var(--ink); color:var(--paper); }
-  @media (max-width:520px){
-    .title-block{ grid-template-columns:1fr; }
-    .title-block .tb-cell{ border-right:none; border-bottom:1px solid var(--line-hair); }
-    .title-block .tb-cell:last-child{ border-bottom:none; }
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:400;
+    text-align:center;
+    line-height:1.0;
+    font-size:clamp(48px, 9vw, 116px);
+    letter-spacing:-0.01em;
+    color:var(--black);
   }
 
-  header.top{
-    position:relative; z-index:5;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:26px 40px;
-    max-width:1180px; margin:0 auto;
-  }
-  .wordmark{
-    font-family:'Fraunces', serif;
-    font-weight:600;
-    font-size:19px;
-  }
-  .wordmark span{ color:var(--verdigris); }
-  nav.top-nav{
-    font-family:'JetBrains Mono', monospace;
-    font-size:12px;
-    letter-spacing:0.08em;
-    text-transform:uppercase;
-    display:flex; gap:28px;
-  }
-  nav.top-nav a{
-    color:var(--ink-soft);
-    text-decoration:none;
-    border-bottom:1px solid transparent;
-    padding-bottom:2px;
-    transition:border-color .2s ease, color .2s ease;
-  }
-  nav.top-nav a:hover{ color:var(--verdigris); border-color:var(--verdigris); }
-
-  /* ---------------- HERO ---------------- */
-  .hero{
-    position:relative; z-index:2;
-    padding:64px 0 90px;
-  }
-  .hero-grid{
-    display:grid;
-    grid-template-columns: 1.1fr 0.9fr;
-    gap:60px;
-    align-items:center;
-  }
-  .hero h1{
-    font-size:clamp(42px, 5.4vw, 74px);
-    line-height:1.02;
-    margin:18px 0 24px;
-  }
-  .hero h1 em{
-    font-style:italic;
-    font-weight:450;
-    color:var(--brownstone);
-  }
-  .hero p.lede{
-    font-size:19px;
-    max-width:46ch;
-    color:var(--ink-soft);
-    margin-bottom:30px;
-  }
-  .btn{
-    display:inline-flex;
-    align-items:center;
-    gap:10px;
-    font-family:'JetBrains Mono', monospace;
-    font-size:12.5px;
-    letter-spacing:0.08em;
-    text-transform:uppercase;
-    text-decoration:none;
-    padding:14px 22px;
-    border-radius:2px;
-    border:1px solid var(--ink);
-    color:var(--ink);
-    transition:background .25s ease, color .25s ease;
-  }
-  .btn.solid{ background:var(--ink); color:var(--paper); }
-  .btn.solid:hover{ background:var(--verdigris); border-color:var(--verdigris); }
-  .btn.ghost:hover{ background:var(--ink); color:var(--paper); }
-
-  /* the ledger stat block */
-  .ledger{
-    background: var(--paper-dim);
-    border:1px solid var(--line-hair);
-    border-radius:2px;
-    padding:22px 26px;
-    font-family:'JetBrains Mono', monospace;
-    font-size:12.5px;
-  }
-  .ledger-row{
-    display:flex; justify-content:space-between; align-items:baseline;
-    padding:11px 0;
-    border-bottom:1px dashed rgba(33,29,23,0.22);
-  }
-  .ledger-row:last-child{ border-bottom:none; }
-  .ledger-row .label{ color:var(--ink-soft); letter-spacing:0.03em;}
-  .ledger-row .value{ font-family:'Fraunces',serif; font-size:26px; font-weight:600;}
-  .ledger-row.designated .value{ color:var(--brass); }
-  .ledger-row.total .value{ color:var(--brownstone); position:relative;}
-  .ledger-caption{
-    margin-top:14px; padding-top:14px; border-top:1px solid var(--line-hair);
-    color:var(--ink-soft); font-size:11.5px; line-height:1.6;
-  }
-
-  /* hero visual: small facade teaser */
-  .hero-visual{
-    display:flex; justify-content:center;
-  }
-  .hero-visual svg{ width:100%; max-width:360px; height:auto; }
-
-  section{ position:relative; z-index:2; padding:90px 0; }
-  .section-head{ max-width:640px; margin-bottom:52px; }
-  .section-head h2{ font-size:clamp(30px,3.4vw,44px); margin-top:14px; line-height:1.08;}
-  .section-head p{ color:var(--ink-soft); margin-top:16px; font-size:17px; max-width:56ch;}
-
-  hr.rule{
-    border:none; border-top:1px solid var(--line-hair);
-    margin:0;
-  }
-
-  /* ---------------- PROCESS TIMELINE ---------------- */
-  .process{ background:var(--paper); }
-  .case-file-row{
-    display:grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap:0;
-    border-top:1px solid var(--ink);
-    border-bottom:1px solid var(--ink);
-  }
-  .case-file{
-    padding:24px 18px 26px;
-    border-right:1px solid var(--line-hair);
-    position:relative;
-    min-height:270px;
-  }
-  .case-file:last-child{ border-right:none; }
-  .case-file .stamp{
-    font-family:'JetBrains Mono', monospace;
-    font-size:11px;
-    letter-spacing:0.05em;
-    color:var(--verdigris);
-    border:1px solid var(--verdigris);
-    display:inline-block;
-    padding:3px 7px;
-    border-radius:2px;
-    transform:rotate(-2deg);
-    margin-bottom:14px;
-  }
-  .case-file h3{
-    font-size:17px; line-height:1.2; margin-bottom:10px;
-  }
-  .case-file p{ font-size:13.8px; color:var(--ink-soft); line-height:1.55;}
-  .case-file .step-no{
-    position:absolute; bottom:16px; right:18px;
-    font-family:'Fraunces', serif; font-weight:300;
-    font-size:34px; color:var(--line-hair);
-  }
-  .process-foot{
-    display:flex; justify-content:space-between; align-items:flex-start;
-    padding-top:18px; gap:30px; flex-wrap:wrap;
-  }
-  .process-foot p{ color:var(--ink-soft); font-size:14px; max-width:60ch; }
-  .process-foot .mono{ font-size:11.5px; color:var(--ink-soft); opacity:0.8;}
-
-  /* ---------------- INSPECTOR ---------------- */
-  .inspector{ background:var(--blueprint); color:var(--paper); }
-  .inspector .section-head h2{ color:var(--paper); }
-  .inspector .section-head p{ color:rgba(231,225,210,0.72); }
-  .inspector .eyebrow{ color:#8FBBA9; }
-  .inspector .eyebrow::before{ background:#8FBBA9; }
-
-  .inspector-stage{
-    display:grid;
-    grid-template-columns: 1fr 1.15fr;
-    gap:50px;
-    align-items:center;
-  }
-  #facade-wrap{ width:100%; }
-  #facade-wrap svg{ width:100%; height:auto; display:block; }
-
-  .feature-list{
-    display:flex; flex-direction:column; gap:2px;
-  }
-  .feature-btn{
+  .word-trigger{
     all:unset;
+    display:inline-block;
     cursor:pointer;
-    display:flex; align-items:center; gap:14px;
-    padding:16px 18px;
-    border:1px solid rgba(231,225,210,0.18);
-    border-radius:2px;
-    background:rgba(231,225,210,0.03);
-    transition:background .2s ease, border-color .2s ease;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    color:var(--black);
+    border-bottom:4px solid transparent;
+    transition: border-color .25s ease, opacity .25s ease;
   }
-  .feature-btn:hover, .feature-btn.active{
-    background:rgba(231,225,210,0.09);
-    border-color:#8FBBA9;
-  }
-  .feature-btn .dot{
-    width:9px; height:9px; border-radius:50%;
-    background:#8FBBA9; flex:none;
-  }
-  .feature-btn .ftxt{ font-family:'JetBrains Mono', monospace; font-size:12.5px; letter-spacing:0.05em; text-transform:uppercase;}
-  .feature-btn .fnum{ font-family:'JetBrains Mono', monospace; font-size:11px; opacity:0.55; margin-left:auto;}
-
-  .detail-card{
-    margin-top:18px;
-    padding:20px 22px;
-    background:rgba(231,225,210,0.06);
-    border:1px solid rgba(231,225,210,0.18);
-    border-radius:2px;
-    min-height:128px;
-  }
-  .detail-card h4{
-    font-family:'Fraunces', serif; font-weight:600; font-size:20px; margin-bottom:8px; color:var(--paper);
-  }
-  .detail-card p{ font-size:14.5px; color:rgba(231,225,210,0.82); }
-  .detail-card .risk{
-    margin-top:12px; font-family:'JetBrains Mono', monospace; font-size:11px;
-    color:#E3B15E; letter-spacing:0.04em;
-  }
-  .inspector-hint{
-    margin-top:16px; font-family:'JetBrains Mono', monospace; font-size:11.5px;
-    color:rgba(231,225,210,0.55);
+  .word-trigger:hover, .word-trigger:focus-visible{
+    border-bottom-color:var(--black);
+    opacity:0.7;
   }
 
-  /* building selector */
-  .building-select{
-    display:flex; gap:10px; flex-wrap:wrap; margin-bottom:36px;
-  }
-  .b-pill{
-    font-family:'JetBrains Mono', monospace; font-size:11.5px; letter-spacing:0.04em;
-    padding:9px 14px; border-radius:20px; border:1px solid rgba(231,225,210,0.28);
-    color:rgba(231,225,210,0.55);
-    display:flex; align-items:center; gap:8px;
-  }
-  .b-pill.active{ border-color:#8FBBA9; color:var(--paper); background:rgba(143,187,169,0.1); }
-  .b-pill.soon{ opacity:0.5; font-style:italic; }
-  .b-pill .plus{ font-family:'Fraunces',serif; color:var(--brass); }
-
-  /* trace button inside detail card */
-  .trace-btn{
-    all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
-    margin-top:14px; font-family:'JetBrains Mono', monospace; font-size:11px;
-    letter-spacing:0.05em; text-transform:uppercase;
-    color:#8FBBA9; border:1px solid #8FBBA9; padding:9px 14px; border-radius:2px;
-    transition:background .2s ease, color .2s ease;
-  }
-  .trace-btn:hover{ background:#8FBBA9; color:var(--blueprint); }
-
-  /* flow / provenance panel */
-  .flow-panel{
-    margin-top:60px; padding-top:44px;
-    border-top:1px solid rgba(231,225,210,0.2);
-    display:none;
-  }
-  .flow-panel.show{ display:block; animation:fadeUp .5s ease; }
-  @keyframes fadeUp{ from{ opacity:0; transform:translateY(10px);} to{ opacity:1; transform:translateY(0);} }
-  .flow-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:32px; flex-wrap:wrap; gap:10px;}
-  .flow-head h3{ font-family:'Fraunces',serif; color:var(--paper); font-size:24px; }
-  .flow-head .mono{ font-size:11px; color:rgba(231,225,210,0.55); }
-  .flow-label{
-    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:0.16em;
-    text-transform:uppercase; color:#8FBBA9; margin-bottom:16px; text-align:center;
-  }
-  .flow-track{
-    display:flex; align-items:stretch; gap:0; flex-wrap:wrap; justify-content:center;
-  }
-  .flow-track .chip{
-    background:rgba(231,225,210,0.04); border:1px solid rgba(231,225,210,0.22);
-    border-radius:2px; padding:14px 16px; width:170px; text-align:left;
-  }
-  .flow-track .chip .ctitle{
-    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--paper);
-    letter-spacing:0.02em; margin-bottom:6px; line-height:1.35;
-  }
-  .flow-track .chip .csub{ font-size:12px; color:rgba(231,225,210,0.58); line-height:1.45;}
-  .flow-arrow{
-    color:#8FBBA9; font-family:'JetBrains Mono', monospace; font-size:16px;
-    display:flex; align-items:center; padding:0 8px; flex:none;
-  }
-  .flow-connector{
-    text-align:center; color:var(--brass); font-family:'JetBrains Mono', monospace;
-    font-size:22px; margin:14px 0; line-height:1;
-  }
-  .flow-element{
-    margin:0 auto; width:fit-content; max-width:90%;
-    background:rgba(169,132,60,0.14); border:1.5px solid var(--brass); border-radius:2px;
-    padding:16px 30px; text-align:center;
-  }
-  .flow-element .fe-title{ font-family:'Fraunces',serif; font-size:20px; color:var(--paper);}
-  .flow-element .fe-sub{ font-family:'JetBrains Mono', monospace; font-size:10.5px; color:var(--brass); margin-top:4px; letter-spacing:0.06em;}
-  .flow-today{
-    margin:22px auto 0; max-width:640px;
-    border:1px dashed #E3B15E; border-radius:2px; padding:18px 22px;
-    color:#E3B15E; font-family:'JetBrains Mono', monospace; font-size:12.5px;
-    text-align:center; line-height:1.6;
-  }
-  @media (max-width:700px){
-    .flow-track{ flex-direction:column; align-items:center; }
-    .flow-arrow{ transform:rotate(90deg); padding:6px 0; }
-    .flow-track .chip{ width:100%; max-width:280px; }
+  #landing.inverted{ background:var(--black); }
+  #landing.inverted .landing-title{ color:var(--canary); }
+  #landing.inverted .word-trigger{ color:var(--canary); }
+  #landing.inverted .word-trigger:hover, #landing.inverted .word-trigger:focus-visible{
+    border-bottom-color:var(--canary);
+    opacity:0.75;
   }
 
-  /* ---------------- VISION / GAP ---------------- */
-  .gap-section{ }
-  .gap-grid{
-    display:grid; grid-template-columns: 0.95fr 1.05fr; gap:60px; align-items:center;
+  /* ---------------- GRID STAGE ---------------- */
+  #grid-stage{
+    position:fixed; inset:0; z-index:10;
+    background:var(--black);
+    cursor:grab;
   }
-  .fade-row{ display:flex; align-items:flex-end; gap:10px; margin-top:10px; }
-  .fade-row .bldg{
-    flex:1;
-    height:120px;
-    border:1px solid var(--ink);
-    border-bottom:3px solid var(--ink);
-    position:relative;
-    background:repeating-linear-gradient(180deg, transparent 0 18px, var(--line-hair) 18px 19px);
-  }
-  .fade-row .bldg.b1{ height:150px; opacity:1; border-color:var(--brass); border-bottom-color:var(--brass);}
-  .fade-row .bldg.b2{ height:130px; opacity:0.75; }
-  .fade-row .bldg.b3{ height:105px; opacity:0.5; }
-  .fade-row .bldg.b4{ height:90px; opacity:0.3; border-style:dashed; }
-  .fade-row .bldg.b5{ height:75px; opacity:0.16; border-style:dashed; }
-  .fade-caption{ display:flex; justify-content:space-between; margin-top:10px; font-family:'JetBrains Mono', monospace; font-size:10.5px; color:var(--ink-soft); }
+  #grid-stage.dragging{ cursor:grabbing; }
+  #grid-canvas{ display:block; width:100%; height:100%; }
 
-  .gap-copy p{ margin-bottom:18px; color:var(--ink-soft); font-size:17px;}
-  .gap-copy p strong{ color:var(--ink); font-weight:600;}
-
-  .pillars{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:24px;
+  .hint{
+    position:fixed; bottom:22px; left:26px; z-index:11;
+    color:rgba(245,197,24,0.65);
+    font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    transition:opacity .3s ease;
   }
-  .pillar{
-    border-top:2px solid var(--verdigris);
-    padding-top:14px;
+  .counter{
+    position:fixed; bottom:22px; right:26px; z-index:11;
+    color:rgba(245,197,24,0.65);
+    font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    transition:opacity .3s ease;
   }
-  .pillar h4{ font-family:'Fraunces',serif; font-size:17px; margin-bottom:8px; }
-  .pillar p{ font-size:14px; color:var(--ink-soft); }
-
-  /* ---------------- CTA ---------------- */
-  .cta{ background:var(--ink); color:var(--paper); }
-  .cta .eyebrow{ color:#8FBBA9; }
-  .cta .eyebrow::before{ background:#8FBBA9; }
-  .cta h2{ color:var(--paper); font-size:clamp(30px,3.6vw,48px); margin-top:14px; max-width:16ch; }
-  .cta-grid{ display:grid; grid-template-columns:1.1fr 0.9fr; gap:60px; margin-top:40px; align-items:start;}
-  .ask-list{ display:flex; flex-direction:column; gap:22px; }
-  .ask-item{ display:flex; gap:16px; }
-  .ask-item .mk{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--brass); padding-top:3px;}
-  .ask-item h4{ font-family:'Fraunces',serif; font-size:17px; color:var(--paper); margin-bottom:4px;}
-  .ask-item p{ font-size:14px; color:rgba(231,225,210,0.72); }
-
-  .contact-card{
-    border:1px solid rgba(231,225,210,0.25);
-    padding:28px;
-    border-radius:2px;
+  .return-hint{
+    position:fixed; top:22px; left:26px; z-index:11;
+    color:rgba(245,197,24,0.75);
+    font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    opacity:0; pointer-events:none;
+    transition:opacity .3s ease;
   }
-  .contact-card p.lead{ font-size:15px; color:rgba(231,225,210,0.85); margin-bottom:20px;}
-  .contact-card .btn{ border-color:var(--paper); color:var(--paper); width:100%; justify-content:center; }
-  .contact-card .btn.solid{ background:var(--verdigris); border-color:var(--verdigris); color:var(--ink);}
-  .contact-card .btn.solid:hover{ background:var(--paper); }
-  .contact-note{ margin-top:16px; font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(231,225,210,0.5);}
-
-  footer{
-    padding:34px 0 50px;
-    font-family:'JetBrains Mono', monospace;
-    font-size:11.5px;
-    color:var(--ink-soft);
-    display:flex; justify-content:space-between;
-    background:var(--ink); color:rgba(231,225,210,0.5);
-  }
-
-  @media (max-width:900px){
-    .hero-grid, .inspector-stage, .gap-grid, .cta-grid{ grid-template-columns:1fr; }
-    .hero-visual{ order:-1; margin-bottom:20px; max-width:220px; margin-inline:auto;}
-    .case-file-row{ grid-template-columns:1fr 1fr; }
-    .case-file{ border-bottom:1px solid var(--line-hair); min-height:auto; padding-bottom:34px;}
-    .case-file:nth-child(2n){ border-right:none; }
-    .pillars{ grid-template-columns:1fr; }
-    .wrap, header.top{ padding-left:22px; padding-right:22px; }
-    nav.top-nav{ display:none; }
-  }
-  @media (prefers-reduced-motion:reduce){
-    html{ scroll-behavior:auto; }
-    *{ transition:none !important; animation:none !important; }
-  }
+  .return-hint.show{ opacity:1; }
 </style>
 </head>
-<body class="locked">
+<body>
+
 <div id="landing">
-  <div class="landing-inner">
-    <h1 class="landing-title">On The<br><em>New</em></h1>
-    <div class="landing-enter">
-      <button class="enter-btn" id="enter-btn">Open the file →</button>
-    </div>
-  </div>
+  <h1 class="landing-title">On The<br><button class="word-trigger" id="enter-word">New</button></h1>
 </div>
 
-<div class="grain-bg"></div>
+<div id="grid-stage">
+  <canvas id="grid-canvas"></canvas>
+  <div class="hint" id="hint">Scroll or drag to explore &middot; 225 facade details, Washington Heights (placeholder)</div>
+  <div class="counter" id="counter">15 &times; 15 grid</div>
+  <div class="return-hint" id="return-hint">Esc &middot; click background to return</div>
+</div>
 
-<header class="top">
-  <div class="wordmark">On The <span>New</span></div>
-  <nav class="top-nav">
-    <a href="#process">The Process</a>
-    <a href="#inspector">The Building</a>
-    <a href="#gap">The Gap</a>
-    <a href="#cta">The Ask</a>
-  </nav>
-</header>
-
-<!-- HERO -->
-<section class="hero">
-  <div class="wrap hero-grid">
-    <div>
-      <div class="eyebrow">A research prototype · pilot neighborhood: Washington Heights</div>
-      <h1>Every landmark<br> plaque tells a story.<br><em>Most buildings never get one.</em></h1>
-      <p class="lede">On The New is a proposed living archive of New York City's architecture — designated and undesignated alike. It documents the cornices, ironwork, and craft of buildings that fall outside a slow, selective, and necessarily limited legal process.</p>
-      <div style="display:flex; gap:14px; flex-wrap:wrap;">
-        <a href="#inspector" class="btn solid">Inspect a facade ↓</a>
-        <a href="#cta" class="btn ghost">See the funding ask</a>
-      </div>
-    </div>
-
-    <div>
-      <div class="hero-visual">
-        <svg viewBox="0 0 300 340" xmlns="http://www.w3.org/2000/svg">
-          <rect x="60" y="40" width="180" height="240" fill="none" stroke="var(--blueprint)" stroke-width="1.4"/>
-          <rect x="50" y="18" width="200" height="24" fill="none" stroke="var(--blueprint)" stroke-width="1.4"/>
-          <line x1="80" y1="90" x2="220" y2="90" stroke="var(--blueprint)" stroke-width="0.8" opacity="0.5"/>
-          <line x1="80" y1="150" x2="220" y2="150" stroke="var(--blueprint)" stroke-width="0.8" opacity="0.5"/>
-          <line x1="80" y1="210" x2="220" y2="210" stroke="var(--blueprint)" stroke-width="0.8" opacity="0.5"/>
-          <rect x="90" y="55" width="30" height="28" fill="none" stroke="var(--blueprint)" stroke-width="1"/>
-          <rect x="180" y="55" width="30" height="28" fill="none" stroke="var(--blueprint)" stroke-width="1"/>
-          <rect x="90" y="115" width="30" height="28" fill="none" stroke="var(--blueprint)" stroke-width="1"/>
-          <rect x="180" y="115" width="30" height="28" fill="none" stroke="var(--blueprint)" stroke-width="1"/>
-          <rect x="135" y="230" width="30" height="50" fill="none" stroke="var(--blueprint)" stroke-width="1.4"/>
-          <path d="M85 175 a35 35 0 0 1 70 0 z" fill="none" stroke="var(--brownstone)" stroke-width="1.4"/>
-          <line x1="60" y1="280" x2="240" y2="280" stroke="var(--ink)" stroke-width="1.6"/>
-          <circle cx="120" cy="205" r="4" fill="var(--verdigris)"/>
-          <circle cx="150" cy="30" r="4" fill="var(--verdigris)"/>
-        </svg>
-      </div>
-      <div class="ledger">
-        <div class="ledger-row designated">
-          <span class="label">INDIVIDUALLY&nbsp;DESIGNATED&nbsp;LANDMARKS</span>
-          <span class="value">~1,200</span>
-        </div>
-        <div class="ledger-row">
-          <span class="label">DESIGNATED PROPERTIES, ALL TYPES</span>
-          <span class="value">37,800+</span>
-        </div>
-        <div class="ledger-row total">
-          <span class="label">BUILDINGS CITYWIDE</span>
-          <span class="value">~1,080,000</span>
-        </div>
-        <div class="ledger-caption">LPC designated 12 landmarks and historic districts (81 buildings total) in Fiscal Year 2023 — against a housing stock of roughly a million structures. Sources: NYC LPC, NYC Mayor's Management Report FY23.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="rule">
-
-<!-- PROCESS -->
-<section class="process" id="process">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Case file</div>
-      <h2>How a building earns its plaque</h2>
-      <p>New York's Landmarks Preservation Commission follows a deliberate, six-stage legal process. It is thorough by design — and, by design, only a small fraction of the city's buildings ever enter it.</p>
-    </div>
-
-    <div class="case-file-row">
-      <div class="case-file">
-        <span class="stamp">01 · SURVEY</span>
-        <h3>Research staff identify candidates</h3>
-        <p>LPC's Research Department surveys neighborhoods and building types to flag structures of potential historic, architectural, or cultural merit.</p>
-        <span class="step-no">01</span>
-      </div>
-      <div class="case-file">
-        <span class="stamp">02 · EVALUATE</span>
-        <h3>Merit is weighed against priorities</h3>
-        <p>Staff assess a candidate against agency priorities, the goal of representing all five boroughs, and how it compares to resources already designated.</p>
-        <span class="step-no">02</span>
-      </div>
-      <div class="case-file">
-        <span class="stamp">03 · CALENDAR</span>
-        <h3>The full Commission votes to hear it</h3>
-        <p>A majority of Commissioners present must vote to "calendar" the building — the first formal step, and by no means guaranteed.</p>
-        <span class="step-no">03</span>
-      </div>
-      <div class="case-file">
-        <span class="stamp">04 · HEARING</span>
-        <h3>A report is written, testimony is heard</h3>
-        <p>Staff draft a detailed report; owners receive a copy in advance. At a public hearing, anyone may testify for or against designation.</p>
-        <span class="step-no">04</span>
-      </div>
-      <div class="case-file">
-        <span class="stamp">05 · VOTE</span>
-        <h3>Six commissioners must say yes</h3>
-        <p>A majority of the eleven-member Commission — six votes — is required. Designation takes effect immediately upon that vote.</p>
-        <span class="step-no">05</span>
-      </div>
-      <div class="case-file">
-        <span class="stamp">06 · FILE</span>
-        <h3>City Planning and Council review</h3>
-        <p>The City Planning Commission has 60 days to weigh zoning impact; the City Council can still modify or disapprove within 120 days.</p>
-        <span class="step-no">06</span>
-      </div>
-    </div>
-
-    <div class="process-foot">
-      <p>A rigorous process, built for permanence — which is exactly why it moves slowly, and why so much of the city's ordinary architecture never reaches step one.</p>
-      <p class="mono">SOURCE: NYC.GOV/LPC — "THE DESIGNATION PROCESS"</p>
-    </div>
-  </div>
-</section>
-
-<!-- INSPECTOR -->
-<section class="inspector" id="inspector">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Field specimen · rowhouse, ca. 1885</div>
-      <h2>Isolate a feature</h2>
-      <p>This is the kind of building the archive exists for: handsome, ordinary, and unlikely to ever face a Commission vote. Click a marker to inspect a detail through the loupe.</p>
-    </div>
-
-    <div class="building-select">
-      <span class="b-pill active">◆ 1885 Brownstone, Bedford-Stuyvesant</span>
-      <span class="b-pill soon"><span class="plus">+</span> Cast-iron loft, SoHo — coming soon</span>
-      <span class="b-pill soon"><span class="plus">+</span> Tenement, Lower East Side — coming soon</span>
-    </div>
-
-    <div class="inspector-stage">
-      <div id="facade-wrap">
-        <svg id="facade-svg" viewBox="0 0 780 920" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <clipPath id="loupe-clip">
-              <circle cx="110" cy="460" r="82"/>
-            </clipPath>
-            <g id="facade-art">
-              <!-- ground -->
-              <line x1="200" y1="860" x2="740" y2="860" stroke="#8FBBA9" stroke-width="2"/>
-              <!-- basement / areaway -->
-              <rect x="250" y="762" width="420" height="58" fill="none" stroke="#8FBBA9" stroke-width="1.2"/>
-              <rect x="280" y="778" width="34" height="30" fill="none" stroke="#8FBBA9" stroke-width="1"/>
-              <rect x="606" y="778" width="34" height="30" fill="none" stroke="#8FBBA9" stroke-width="1"/>
-              <!-- facade outline -->
-              <rect x="250" y="150" width="420" height="670" fill="none" stroke="#8FBBA9" stroke-width="1.4"/>
-              <!-- cornice -->
-              <rect x="235" y="112" width="450" height="38" fill="none" stroke="#8FBBA9" stroke-width="1.6"/>
-              <path d="M290 150 L310 172 L330 150 Z" fill="none" stroke="#8FBBA9" stroke-width="1.2"/>
-              <path d="M370 150 L390 172 L410 150 Z" fill="none" stroke="#8FBBA9" stroke-width="1.2"/>
-              <path d="M450 150 L470 172 L490 150 Z" fill="none" stroke="#8FBBA9" stroke-width="1.2"/>
-              <path d="M530 150 L550 172 L570 150 Z" fill="none" stroke="#8FBBA9" stroke-width="1.2"/>
-              <path d="M610 150 L630 172 L650 150 Z" fill="none" stroke="#8FBBA9" stroke-width="1.2"/>
-              <!-- floor divider lines -->
-              <line x1="250" y1="290" x2="670" y2="290" stroke="#8FBBA9" stroke-width="0.6" opacity="0.5"/>
-              <line x1="250" y1="430" x2="670" y2="430" stroke="#8FBBA9" stroke-width="0.6" opacity="0.5"/>
-              <line x1="250" y1="570" x2="670" y2="570" stroke="#8FBBA9" stroke-width="0.6" opacity="0.5"/>
-              <!-- 4th floor windows (bays at 320,460,600) -->
-              <g>
-                <rect x="285" y="175" width="70" height="95" fill="none" stroke="#E7E1D2" stroke-width="1.2"/>
-                <rect x="425" y="175" width="70" height="95" fill="none" stroke="#E7E1D2" stroke-width="1.2"/>
-                <rect x="565" y="175" width="70" height="95" fill="none" stroke="#E7E1D2" stroke-width="1.2"/>
-                <rect x="277" y="161" width="86" height="10" fill="none" stroke="#8FBBA9" stroke-width="1"/>
-                <rect x="417" y="161" width="86" height="10" fill="none" stroke="#8FBBA9" stroke-width="1"/>
-                <rect x="557" y="161" width="86" height="10" fill="none" stroke="#8FBBA9" stroke-width="1"/>
-              </g>
-              <!-- 3rd floor windows -->
-              <g>
-                <rect x="285" y="315" width="70" height="95" fill="none" stroke="#E7E1D2" stroke-width="1.2"/>
-                <rect x="425" y="315" width="70" height="95" fill="none" stroke="#E7E1D2" stroke-width="1.2"/>
-                <rect x="565" y="315" width="70" height="95" fill="none" stroke="#E7E1D2" stroke-width="1.2"/>
-                <rect x="277" y="301" width="86" height="10" fill="none" stroke="#8FBBA9" stroke-width="1"/>
-                <rect x="417" y="301" width="86" height="10" fill="none" stroke="#8FBBA9" stroke-width="1"/>
-                <rect x="557" y="301" width="86" height="10" fill="none" stroke="#8FBBA9" stroke-width="1"/>
-              </g>
-              <!-- 2nd floor windows -->
-              <g>
-                <rect x="285" y="455" width="70" height="95" fill="none" stroke="#E7E1D2" stroke-width="1.2"/>
-                <rect x="425" y="455" width="70" height="95" fill="none" stroke="#E7E1D2" stroke-width="1.2"/>
-                <rect x="565" y="455" width="70" height="95" fill="none" stroke="#E7E1D2" stroke-width="1.2"/>
-                <rect x="277" y="441" width="86" height="10" fill="none" stroke="#8FBBA9" stroke-width="1"/>
-                <rect x="417" y="441" width="86" height="10" fill="none" stroke="#8FBBA9" stroke-width="1"/>
-                <rect x="557" y="441" width="86" height="10" fill="none" stroke="#8FBBA9" stroke-width="1"/>
-              </g>
-              <!-- parlor floor: arched windows + door -->
-              <g>
-                <path d="M285 660 L285 740 L365 740 L365 660 A40 40 0 0 0 285 660 Z" fill="none" stroke="#E7E1D2" stroke-width="1.3"/>
-                <path d="M565 660 L565 740 L645 740 L645 660 A40 40 0 0 0 565 660 Z" fill="none" stroke="#E7E1D2" stroke-width="1.3"/>
-                <path d="M325 617 L305 640 L345 640 Z" fill="none" stroke="var(--brass)" stroke-width="1.4"/>
-                <path d="M605 617 L585 640 L625 640 Z" fill="none" stroke="var(--brass)" stroke-width="1.4"/>
-                <rect x="425" y="622" width="70" height="118" fill="none" stroke="#E7E1D2" stroke-width="1.4"/>
-                <path d="M425 622 L460 600 L495 622" fill="none" stroke="#8FBBA9" stroke-width="1.2"/>
-              </g>
-              <!-- stoop steps -->
-              <path d="M395 862 L525 862 L512 820 L408 820 Z" fill="none" stroke="#8FBBA9" stroke-width="1"/>
-              <line x1="404" y1="838" x2="516" y2="838" stroke="#8FBBA9" stroke-width="0.8"/>
-              <line x1="401" y1="850" x2="519" y2="850" stroke="#8FBBA9" stroke-width="0.8"/>
-              <!-- stoop ironwork -->
-              <g>
-                <line x1="398" y1="862" x2="398" y2="812" stroke="var(--brass)" stroke-width="1.4"/>
-                <circle cx="398" cy="808" r="5" fill="none" stroke="var(--brass)" stroke-width="1.4"/>
-                <path d="M398 812 q14 10 0 24" fill="none" stroke="var(--brass)" stroke-width="1"/>
-                <line x1="522" y1="862" x2="522" y2="812" stroke="var(--brass)" stroke-width="1.4"/>
-                <circle cx="522" cy="808" r="5" fill="none" stroke="var(--brass)" stroke-width="1.4"/>
-                <path d="M522 812 q-14 10 0 24" fill="none" stroke="var(--brass)" stroke-width="1"/>
-              </g>
-              <!-- fire escape (right side, floors 2-4) -->
-              <g>
-                <rect x="672" y="255" width="55" height="8" fill="none" stroke="#E3B15E" stroke-width="1.1"/>
-                <rect x="672" y="395" width="55" height="8" fill="none" stroke="#E3B15E" stroke-width="1.1"/>
-                <rect x="672" y="535" width="55" height="8" fill="none" stroke="#E3B15E" stroke-width="1.1"/>
-                <line x1="676" y1="263" x2="720" y2="395" stroke="#E3B15E" stroke-width="1"/>
-                <line x1="720" y1="263" x2="676" y2="395" stroke="#E3B15E" stroke-width="1"/>
-                <line x1="676" y1="403" x2="720" y2="535" stroke="#E3B15E" stroke-width="1"/>
-                <line x1="720" y1="403" x2="676" y2="535" stroke="#E3B15E" stroke-width="1"/>
-                <line x1="700" y1="112" x2="700" y2="255" stroke="#E3B15E" stroke-width="1" stroke-dasharray="3 4"/>
-              </g>
-            </g>
-          </defs>
-
-          <!-- background grid within canvas -->
-          <rect x="0" y="0" width="780" height="920" fill="none"/>
-
-          <!-- main drawing -->
-          <use href="#facade-art"/>
-
-          <!-- dimension line + floor labels -->
-          <g class="mono" font-family="JetBrains Mono, monospace" font-size="11" fill="#8FBBA9" opacity="0.75">
-            <line x1="700" y1="112" x2="700" y2="150" stroke="#8FBBA9" stroke-width="0.6"/>
-            <text x="710" y="225">4TH</text>
-            <text x="710" y="365">3RD</text>
-            <text x="710" y="505">2ND</text>
-            <text x="710" y="655">PARLOR</text>
-            <text x="710" y="795">BASE</text>
-          </g>
-
-          <!-- hotspots -->
-          <g id="hotspots" style="cursor:pointer;">
-            <circle class="hot" data-id="cornice" cx="450" cy="160" r="9" fill="#8FBBA9"/>
-            <circle class="hot" data-id="lintel" cx="460" cy="301" r="9" fill="#8FBBA9"/>
-            <circle class="hot" data-id="keystone" cx="325" cy="628" r="9" fill="var(--brass)"/>
-            <circle class="hot" data-id="stoop" cx="398" cy="808" r="9" fill="var(--brass)"/>
-            <circle class="hot" data-id="fireescape" cx="699" cy="410" r="9" fill="#E3B15E"/>
-          </g>
-
-          <!-- loupe display -->
-          <g>
-            <circle cx="110" cy="460" r="86" fill="#22384A" stroke="var(--brass)" stroke-width="2"/>
-            <g clip-path="url(#loupe-clip)">
-              <use id="loupe-use" href="#facade-art" transform="scale(1)"/>
-            </g>
-            <circle cx="110" cy="460" r="82" fill="none" stroke="#8FBBA9" stroke-width="1" opacity="0.5"/>
-            <line id="leader-line" x1="110" y1="460" x2="450" y2="160" stroke="#8FBBA9" stroke-width="1" stroke-dasharray="3 4" opacity="0.6"/>
-            <text x="110" y="565" text-anchor="middle" class="mono" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#8FBBA9" opacity="0.7">DETAIL VIEW · 3.2×</text>
-          </g>
-        </svg>
-      </div>
-
-      <div>
-        <div class="feature-list" id="feature-list">
-          <button class="feature-btn" data-id="cornice"><span class="dot"></span><span class="ftxt">Sheet-metal cornice</span><span class="fnum">01</span></button>
-          <button class="feature-btn" data-id="lintel"><span class="dot"></span><span class="ftxt">Window lintel</span><span class="fnum">02</span></button>
-          <button class="feature-btn" data-id="keystone"><span class="dot"></span><span class="ftxt">Carved keystone</span><span class="fnum">03</span></button>
-          <button class="feature-btn" data-id="stoop"><span class="dot"></span><span class="ftxt">Stoop ironwork</span><span class="fnum">04</span></button>
-          <button class="feature-btn" data-id="fireescape"><span class="dot"></span><span class="ftxt">Fire escape</span><span class="fnum">05</span></button>
-        </div>
-        <div class="detail-card" id="detail-card">
-          <h4 id="detail-title">Select a marker</h4>
-          <p id="detail-text">Every one of these features is load-bearing in the building's story, even if none of them is load-bearing in its walls. Click any marker on the facade or in the list to the left.</p>
-        </div>
-        <div class="inspector-hint">This facade is a composite illustration, not a specific address — representative of thousands like it across the outer boroughs.</div>
-      </div>
-    </div>
-
-    <div class="flow-panel" id="flow-panel">
-      <div class="flow-head">
-        <h3 id="flow-heading">Provenance of a detail</h3>
-        <span class="mono">MATERIAL FLOW ↓ &nbsp;·&nbsp; SYMBOLIC FLOW ↑</span>
-      </div>
-
-      <div class="flow-label">Material — labor &amp; substance</div>
-      <div class="flow-track" id="flow-material"></div>
-
-      <div class="flow-connector">↓</div>
-      <div class="flow-element" id="flow-element">
-        <div class="fe-title" id="flow-element-title">—</div>
-        <div class="fe-sub">THE FACADE ELEMENT, AS BUILT</div>
-      </div>
-      <div class="flow-connector">↑</div>
-
-      <div class="flow-track" id="flow-immaterial"></div>
-      <div class="flow-label" style="margin-top:16px;">Immaterial — motif &amp; meaning</div>
-
-      <div class="flow-today" id="flow-today"></div>
-    </div>
-  </div>
-</section>
-
-<!-- GAP / VISION -->
-<section class="gap-section" id="gap">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">The proposal</div>
-      <h2>Designation isn't the only kind of memory</h2>
-    </div>
-
-    <div class="gap-grid">
-      <div>
-        <div class="fade-row">
-          <div class="bldg b1"></div>
-          <div class="bldg b2"></div>
-          <div class="bldg b3"></div>
-          <div class="bldg b4"></div>
-          <div class="bldg b5"></div>
-        </div>
-        <div class="fade-caption">
-          <span>DESIGNATED, RECORDED</span>
-          <span>SURVEYED, WAITING</span>
-          <span>NEVER SURVEYED</span>
-        </div>
-      </div>
-
-      <div class="gap-copy">
-        <p><strong>Legal designation was never meant to be a complete record</strong> — it's a protective status, reserved for buildings that clear a high, deliberately narrow bar. Most of the city's architecture, including plenty of it worth remembering, will never clear that bar and was never surveyed in the first place.</p>
-        <p>On The New proposes an open, ongoing archive that runs <strong>alongside</strong> the LPC process rather than in competition with it — documenting the cornice details, ironwork, materials, and human stories of buildings whether or not they ever reach a Commission vote.</p>
-        <div class="pillars">
-          <div class="pillar">
-            <h4>Document</h4>
-            <p>Conservator-grade photography, materials notes, and measured drawings for buildings outside the designation pipeline.</p>
-          </div>
-          <div class="pillar">
-            <h4>Contribute</h4>
-            <p>A public submission tool so residents can record their own building's features and history before they're altered or lost.</p>
-          </div>
-          <div class="pillar">
-            <h4>Connect</h4>
-            <p>Every entry cross-referenced to LPC survey and designation data, so the archive shows exactly where the legal record ends.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CTA -->
-<section class="cta" id="cta">
-  <div class="wrap">
-    <div class="eyebrow">Funding proposal</div>
-    <h2>What a research grant makes possible</h2>
-    <div class="cta-grid">
-      <div class="ask-list">
-        <div class="ask-item">
-          <span class="mk">→</span>
-          <div>
-            <h4>A Washington Heights pilot survey</h4>
-            <p>Twelve months of fieldwork documenting the neighborhood's rowhouses and apartment buildings, in partnership with local preservation groups.</p>
-          </div>
-        </div>
-        <div class="ask-item">
-          <span class="mk">→</span>
-          <div>
-            <h4>An open contribution platform</h4>
-            <p>Public-facing tools for residents and building owners to submit photographs, materials notes, and oral histories.</p>
-          </div>
-        </div>
-        <div class="ask-item">
-          <span class="mk">→</span>
-          <div>
-            <h4>A shared data standard with LPC records</h4>
-            <p>Structuring the archive so it can sit next to, and eventually inform, the Commission's own survey work.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="contact-card">
-        <p class="lead">This site is a proof of concept built to accompany a research funding proposal. We'd welcome the chance to walk through it in more detail.</p>
-        <a href="mailto:hello@onthenew.org" class="btn solid">Get in touch ↗</a>
-        <div class="contact-note">hello@onthenew.org — replace with your project's contact before sharing</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<footer>
-  <div class="wrap" style="display:flex; justify-content:space-between; width:100%;">
-    <span>ON THE NEW — PROTOTYPE, 2026</span>
-    <span>PROCESS DATA: NYC.GOV/SITE/LPC</span>
-  </div>
-</footer>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-  const features = {
-    cornice: {
-      title: "Sheet-metal cornice",
-      text: "A pressed and formed metal cornice with decorative brackets, standard on New York rowhouses from the 1870s–90s. It's often the first thing removed during a re-facading, since it sits outside most people's idea of what's worth keeping.",
-      risk: "RISK: routinely stripped during re-roofing"
-    },
-    lintel: {
-      title: "Window lintel",
-      text: "A projecting stone or metal band above each window opening, doing real structural work while also setting the rhythm of the facade. Small variations in profile can date a building within a decade to someone who knows what to look for.",
-      risk: "RISK: painted over, profile lost"
-    },
-    keystone: {
-      title: "Carved keystone",
-      text: "A hand-carved wedge at the top of the parlor-floor arch, marking the building's most formal room to the street. Renaissance Revival brownstones used this detail to signal status — it's individual stonecutters' work, and it's almost never mentioned by name in designation reports.",
-      risk: "RISK: no individual record exists"
-    },
-    stoop: {
-      title: "Stoop ironwork",
-      text: "Hand-forged railings and newel posts, often unique to the foundry that cast them. Nineteenth-century ironworkers left distinguishable house styles in their scrollwork — a craft record that disappears whenever a stoop is 'restored' in aluminum.",
-      risk: "RISK: replaced, not repaired"
-    },
-    fireescape: {
-      title: "Fire escape",
-      text: "A later addition, mandated by early-twentieth-century safety law rather than by taste. It's its own layer of the building's history — tenement reform, not architectural ambition — and one that period-accurate restorations often try to erase entirely.",
-      risk: "RISK: erased in the name of authenticity"
-    }
-  };
-
-  // landing / splash page
+  /* ---------------- LANDING DISMISS + INVERT ---------------- */
   const landing = document.getElementById('landing');
-  const enterBtn = document.getElementById('enter-btn');
-  enterBtn.addEventListener('click', ()=>{
+  document.getElementById('enter-word').addEventListener('click', () => {
     landing.classList.add('hidden');
-    document.body.classList.remove('locked');
+  });
+  landing.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    landing.classList.toggle('inverted');
   });
 
-  const flowData = {
-    cornice: {
-      element: "Sheet-metal cornice",
-      material: [
-        {t:"Rolled zinc sheet", s:"Milled upstate or imported, sold by the sheet to metal shops"},
-        {t:"Stamped by machine", s:"Pattern-cut and pressed at a Canal St. cornice works"},
-        {t:"Seamed on the roof", s:"Cornice mechanics soldered & braced sections in place"},
-        {t:"Fixed to wood framing", s:"Carpenters built the backing the metal skin hangs on"}
-      ],
-      immaterial: [
-        {t:"Classical cornice orders", s:"Adapted from pattern-book Greek & Renaissance sources"},
-        {t:"Signaled completeness", s:"A facade wasn't 'finished' to the eye without one"},
-        {t:"Democratized ornament", s:"Stamped metal let modest rowhouses wear a rich man's detail"},
-        {t:"Read as generic now", s:"Rarely noticed unless it's missing or falling apart"}
-      ],
-      today: "TODAY: legible mainly by its absence — the flat roofline left when a cornice is removed is one of the most common signs of an altered facade on the block."
-    },
-    lintel: {
-      element: "Window lintel",
-      material: [
-        {t:"Brownstone quarried", s:"Portland, CT or Passaic, NJ — Triassic sandstone belt"},
-        {t:"Cut by stonecutters", s:"Often Italian or Irish immigrant tradesmen, largely uncredited"},
-        {t:"Shipped by barge & rail", s:"Downriver or by rail to a Brooklyn or Manhattan stoneyard"},
-        {t:"Set during construction", s:"Masons placed each lintel as the wall rose, course by course"}
-      ],
-      immaterial: [
-        {t:"Renaissance palazzo surrounds", s:"European window framing translated to a rowhouse scale"},
-        {t:"Signaled solidity", s:"Heavy stone said 'permanent,' 'respectable,' 'paid for'"},
-        {t:"Unified the block front", s:"Matching lintel lines made separate houses read as one streetscape"},
-        {t:"A dating clue today", s:"Lintel profile helps historians place a building within a decade"}
-      ],
-      today: "TODAY: the quarries themselves are largely exhausted or closed — matching stone for a repair is now harder to source than the original builders ever imagined it would be."
-    },
-    keystone: {
-      element: "Carved keystone",
-      material: [
-        {t:"Same brownstone quarries", s:"NJ / CT sandstone, selected for a clean grain to carve"},
-        {t:"Hand-carved on site or in yard", s:"One stonecutter, one block, no two ever quite identical"},
-        {t:"No mass production", s:"Unlike stamped metal, each keystone was a bespoke object"},
-        {t:"Set at the arch's crown", s:"Placed last, locking the arch's structural geometry"}
-      ],
-      immaterial: [
-        {t:"Ancient Roman motif", s:"The keystone as both literal and symbolic 'holding together'"},
-        {t:"Marked the parlor floor", s:"Flagged the house's most formal, most public room"},
-        {t:"A personal signature", s:"The one carved, individual mark on an otherwise repetitive row"},
-        {t:"Most singular detail today", s:"Often the only hand-carved element left on the block"}
-      ],
-      today: "TODAY: because it was never mass-produced, a damaged keystone usually can't be ordered from a catalog — replacement means finding a carver, not a supplier."
-    },
-    stoop: {
-      element: "Stoop ironwork",
-      material: [
-        {t:"Pig iron, cast locally", s:"Melted and poured at a Manhattan or Brooklyn foundry"},
-        {t:"Foundry pattern reused", s:"One pattern-maker's mold repeated across many houses"},
-        {t:"Finished by ironworkers", s:"Cast pieces hand-assembled and fitted on site"},
-        {t:"Bolted into stone", s:"Anchored through the stair stringers during construction"}
-      ],
-      immaterial: [
-        {t:"Catalog craft", s:"Mass-produced patterns still read, at the time, as 'ornamental'"},
-        {t:"Marked public vs. private", s:"The raised stoop separated the parlor from the street"},
-        {t:"A local signature", s:"A foundry's scroll pattern became recognizable block to block"},
-        {t:"First thing replaced today", s:"Often swapped for powder-coated aluminum during 'upkeep'"}
-      ],
-      today: "TODAY: the foundries that cast these patterns are gone — once a run of railing is scrapped, that specific scrollwork usually can't be recast at any price."
-    },
-    fireescape: {
-      element: "Fire escape",
-      material: [
-        {t:"Wrought & cast iron", s:"Fabricated to Tenement House Act specifications"},
-        {t:"Built by contracted ironworks", s:"Manufactured under post-1901 safety-law contracts"},
-        {t:"Retrofit, not original", s:"Bolted through existing masonry after construction"},
-        {t:"Repainted repeatedly", s:"Maintained under building code, not for appearance"}
-      ],
-      immaterial: [
-        {t:"A code object, not a style", s:"Existed because law required it, not because taste chose it"},
-        {t:"Signaled reform compliance", s:"Visible proof a landlord met post-Triangle safety pressure"},
-        {t:"Read two ways", s:"'Unsightly' to some, visible social history to others"},
-        {t:"Often erased today", s:"Removed or hidden in restorations chasing 'period accuracy'"}
-      ],
-      today: "TODAY: removing it erases the one facade element that records tenant safety law rather than architectural fashion — a different, less decorative kind of history."
-    }
-  };
+  /* ---------------- GRID DATA -----------------------------------------
+     225 cells (15 x 15). Each entry is a placeholder for now.
+     Later: swap an entry's { kind:'placeholder' } for
+     { kind:'model', url:'models/your-file.glb' } and loadCell() below
+     will need a GLTFLoader branch added — the array shape is already
+     set up so that's a drop-in change, not a restructure.
+  ----------------------------------------------------------------------*/
+  const GRID_COLS = 15;
+  const GRID_ROWS = 15;
+  const CELL_COUNT = GRID_COLS * GRID_ROWS;
 
-  function chipHTML(c){
-    return '<div class="chip"><div class="ctitle">'+c.t+'</div><div class="csub">'+c.s+'</div></div>';
-  }
+  const gridData = [];
+  for(let i=0; i<CELL_COUNT; i++){
+    const col = i % GRID_COLS;
+    const row = Math.floor(i / GRID_COLS);
+    const forbidden = new Set();
+    if(col > 0) forbidden.add(gridData[i-1].shapeIndex);                         // left
+    if(row > 0) forbidden.add(gridData[i-GRID_COLS].shapeIndex);                 // top
+    if(col > 0 && row > 0) forbidden.add(gridData[i-GRID_COLS-1].shapeIndex);    // top-left
+    if(col < GRID_COLS-1 && row > 0) forbidden.add(gridData[i-GRID_COLS+1].shapeIndex); // top-right
 
-  function renderFlow(id){
-    const f = flowData[id];
-    if(!f) return;
-    const matEl = document.getElementById('flow-material');
-    const immEl = document.getElementById('flow-immaterial');
-    matEl.innerHTML = f.material.map((c,i)=> chipHTML(c) + (i<f.material.length-1 ? '<span class="flow-arrow">→</span>' : '')).join('');
-    immEl.innerHTML = f.immaterial.map((c,i)=> chipHTML(c) + (i<f.immaterial.length-1 ? '<span class="flow-arrow">→</span>' : '')).join('');
-    document.getElementById('flow-element-title').textContent = f.element;
-    document.getElementById('flow-today').textContent = f.today;
-    document.getElementById('flow-heading').textContent = 'Provenance of the ' + f.element.toLowerCase();
-    const panel = document.getElementById('flow-panel');
-    panel.classList.add('show');
-    panel.scrollIntoView({behavior:'smooth', block:'start'});
-  }
+    let choices = [0,1,2,3,4].filter(s => !forbidden.has(s));
+    if(choices.length === 0) choices = [0,1,2,3,4];
+    const shapeIndex = choices[Math.floor(Math.random() * choices.length)];
 
-  const svg = document.getElementById('facade-svg');
-  const loupeUse = document.getElementById('loupe-use');
-  const leader = document.getElementById('leader-line');
-  const titleEl = document.getElementById('detail-title');
-  const textEl = document.getElementById('detail-text');
-  const detailCard = document.getElementById('detail-card');
-  const scale = 3.2;
-  const loupeCX = 110, loupeCY = 460;
-
-  function activate(id){
-    const hot = svg.querySelector('.hot[data-id="'+id+'"]');
-    if(!hot) return;
-    const x = parseFloat(hot.getAttribute('cx'));
-    const y = parseFloat(hot.getAttribute('cy'));
-
-    const tx = loupeCX - x*scale;
-    const ty = loupeCY - y*scale;
-    loupeUse.setAttribute('transform', 'translate('+tx+','+ty+') scale('+scale+')');
-
-    leader.setAttribute('x2', x);
-    leader.setAttribute('y2', y);
-
-    const f = features[id];
-    if(f){
-      let html = '<h4 id="detail-title">'+f.title+'</h4><p id="detail-text">'+f.text+'</p>';
-      detailCard.innerHTML = html + '<div class="risk">'+f.risk+'</div>' +
-        '<button class="trace-btn" data-trace="'+id+'">Trace this element\'s flows →</button>';
-    }
-
-    document.querySelectorAll('.feature-btn').forEach(b=>b.classList.toggle('active', b.dataset.id===id));
-    document.querySelectorAll('.hot').forEach(h=>h.setAttribute('r', h.dataset.id===id ? 12 : 9));
-  }
-
-  svg.querySelectorAll('.hot').forEach(h=>{
-    h.addEventListener('click', ()=>activate(h.dataset.id));
-  });
-  document.querySelectorAll('.feature-btn').forEach(b=>{
-    b.addEventListener('click', ()=>activate(b.dataset.id));
-  });
-  // event delegation, since the trace button is re-created on every activate()
-  detailCard.addEventListener('click', (e)=>{
-    const btn = e.target.closest('[data-trace]');
-    if(btn) renderFlow(btn.dataset.trace);
-  });
-
-  // gentle idle pulse on hotspots to invite interaction
-  let pulseState = 0;
-  setInterval(()=>{
-    if(document.querySelector('.feature-btn.active')) return;
-    const dots = svg.querySelectorAll('.hot');
-    dots.forEach((d,i)=>{
-      d.style.opacity = (i === pulseState % dots.length) ? '1' : '0.65';
+    gridData.push({
+      kind: 'placeholder',
+      shapeIndex,
+      rotSeed: new THREE.Vector3(Math.random(), Math.random(), Math.random()).multiplyScalar(Math.PI*2),
+      spin: 0.05 + Math.random() * 0.16
     });
-    pulseState++;
-  }, 900);
-</script>
+  }
 
+  /* ---------------- RENDERER / SCENES ---------------- */
+  const canvas = document.getElementById('grid-canvas');
+  const stage = document.getElementById('grid-stage');
+  const hintEl = document.getElementById('hint');
+  const counterEl = document.getElementById('counter');
+  const returnHintEl = document.getElementById('return-hint');
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xF5C518);
+
+  const COLOR_NORMAL_BG = 0xF5C518;
+  const COLOR_NORMAL_OBJ = 0x0A0A0A;
+  const COLOR_INVERTED_BG = 0x0A0A0A;
+  const COLOR_INVERTED_OBJ = 0xFFE135;
+  let colorsInverted = false;
+
+  function applyColorScheme(){
+    scene.background.set(colorsInverted ? COLOR_INVERTED_BG : COLOR_NORMAL_BG);
+    cells.forEach(c => c.mesh.material.color.set(colorsInverted ? COLOR_INVERTED_OBJ : COLOR_NORMAL_OBJ));
+  }
+
+  let viewW = window.innerWidth;
+  let viewH = window.innerHeight;
+
+  const gridCamera = new THREE.OrthographicCamera(-viewW/2, viewW/2, viewH/2, -viewH/2, 0.1, 3000);
+  gridCamera.position.z = 1000;
+
+  const inspectCamera = new THREE.PerspectiveCamera(45, viewW/viewH, 0.1, 3000);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(200, 300, 500);
+  scene.add(key);
+  const rim = new THREE.DirectionalLight(0xF5C518, 0.35);
+  rim.position.set(-300, -200, 200);
+  scene.add(rim);
+
+  const placeholderGeoms = [
+    new THREE.BoxGeometry(1.7, 1.7, 1.7),
+    new THREE.IcosahedronGeometry(1.15, 0),
+    new THREE.TorusGeometry(1, 0.4, 16, 40),
+    new THREE.ConeGeometry(1.1, 1.7, 24),
+    new THREE.SphereGeometry(1.15, 24, 18)
+  ];
+
+  const cells = []; // { mesh, baseX, baseY, hovered, jitter, jitterTarget, scaleBase, scaleCurrent }
+
+  function loadCell(entry){
+    // Extension point: branch on entry.kind === 'model' and load with
+    // THREE.GLTFLoader once real facade-ornament models exist.
+    const geom = placeholderGeoms[entry.shapeIndex];
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x0A0A0A, roughness: 0.55, metalness: 0.08,
+      transparent: true, opacity: 1, depthWrite: false
+    });
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.rotation.set(entry.rotSeed.x, entry.rotSeed.y, entry.rotSeed.z);
+    return mesh;
+  }
+
+  function buildGrid(){
+    cells.forEach(c => scene.remove(c.mesh));
+    cells.length = 0;
+
+    const spacingX = viewW / GRID_COLS;
+    const spacingY = viewH / GRID_ROWS;
+    const cellBase = Math.min(spacingX, spacingY) * 0.32;
+
+    for(let row=0; row<GRID_ROWS; row++){
+      for(let col=0; col<GRID_COLS; col++){
+        const idx = row*GRID_COLS + col;
+        const entry = gridData[idx];
+        const mesh = loadCell(entry);
+        const scaleBase = cellBase;
+        mesh.scale.setScalar(scaleBase);
+        const baseX = (col - (GRID_COLS-1)/2) * spacingX;
+        const baseY = (row - (GRID_ROWS-1)/2) * spacingY;
+        mesh.position.set(baseX, baseY, 0);
+        scene.add(mesh);
+        cells.push({
+          mesh, entry, baseX, baseY, scaleBase,
+          hovered:false,
+          wasHovered:false,
+          jitter:new THREE.Vector3(0,0,0),
+          jitterTarget:new THREE.Vector3(0,0,0),
+          scaleCurrent:1
+        });
+      }
+    }
+  }
+
+  /* ---------------- PAN + INFINITE WRAP ---------------- */
+  const offset = { x: 0, y: 0 };
+
+  function wrap(value, full){
+    return ((value + full/2) % full + full) % full - full/2;
+  }
+
+  function applyPositions(dt){
+    const fullW = viewW;
+    const fullH = viewH;
+    cells.forEach(c => {
+      if(mode !== 'grid' && c === selected) return; // frozen while isolated
+
+      // jitter: a single nudge on hover-enter, then it holds still until hover ends
+      if(c.hovered && !c.wasHovered){
+        const r = Math.min(fullW, fullH) * 0.035;
+        c.jitterTarget.set((Math.random()-0.5)*r, (Math.random()-0.5)*r, Math.random()*22);
+      } else if(!c.hovered){
+        c.jitterTarget.set(0,0,0);
+      }
+      c.wasHovered = c.hovered;
+      c.jitter.lerp(c.jitterTarget, 0.12);
+      c.scaleCurrent += ((c.hovered ? 1.22 : 1) - c.scaleCurrent) * 0.15;
+
+      const wx = wrap(c.baseX - offset.x, fullW);
+      const wy = wrap(c.baseY - offset.y, fullH);
+      c.mesh.position.set(wx + c.jitter.x, wy + c.jitter.y, c.jitter.z);
+      c.mesh.scale.setScalar(c.scaleBase * c.scaleCurrent);
+    });
+  }
+
+  /* ---------------- MODE STATE ---------------- */
+  let mode = 'grid'; // 'grid' | 'transition' | 'isolated'
+  let selected = null;
+  let orbitControls = null;
+
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+
+  function setNdc(e){
+    const r = canvas.getBoundingClientRect();
+    ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+    ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  }
+
+  function meshUnderPointer(camera){
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObjects(cells.map(c => c.mesh));
+    if(!hits.length) return null;
+    return cells.find(c => c.mesh === hits[0].object) || null;
+  }
+
+  /* ---------------- HOVER (grid mode only) ---------------- */
+  stage.addEventListener('mousemove', (e) => {
+    if(mode !== 'grid') return;
+    setNdc(e);
+    const hit = meshUnderPointer(gridCamera);
+    cells.forEach(c => { c.hovered = (c === hit); });
+  });
+  stage.addEventListener('mouseleave', () => {
+    cells.forEach(c => { c.hovered = false; });
+  });
+
+  /* ---------------- RIGHT-CLICK: INVERT COLOR SCHEME ---------------- */
+  stage.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    colorsInverted = !colorsInverted;
+    applyColorScheme();
+  });
+
+  /* ---------------- WHEEL: pan grid, or dolly-zoom when isolated ---------------- */
+  stage.addEventListener('wheel', (e) => {
+    if(mode === 'grid'){
+      e.preventDefault();
+      offset.x += e.deltaX;
+      offset.y += e.deltaY;
+    }
+    // when isolated, OrbitControls' own wheel listener handles zoom
+  }, { passive:false });
+
+  /* ---------------- CLICK vs DRAG-PAN ---------------- */
+  let dragging = false, downX=0, downY=0, lastX=0, lastY=0;
+  const inertia = { x: 0, y: 0 };
+  const FRICTION = 0.90;
+  const INERTIA_EPSILON = 0.03;
+
+  stage.addEventListener('pointerdown', (e) => {
+    downX = lastX = e.clientX; downY = lastY = e.clientY;
+    inertia.x = 0; inertia.y = 0;
+    if(mode === 'grid'){ dragging = true; stage.classList.add('dragging'); }
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if(!dragging || mode !== 'grid') return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    offset.x -= dx;
+    offset.y += dy;
+    inertia.x = dx;
+    inertia.y = dy;
+  });
+
+  window.addEventListener('pointerup', (e) => {
+    const dist = Math.hypot(e.clientX - downX, e.clientY - downY);
+    if(mode === 'grid' && dist < 6){
+      setNdc(e);
+      const hit = meshUnderPointer(gridCamera);
+      if(hit) isolate(hit);
+      inertia.x = 0; inertia.y = 0;
+    }
+    dragging = false;
+    stage.classList.remove('dragging');
+  });
+
+  /* ---------------- ISOLATE / ORBIT TRANSITION ---------------- */
+  const GROW_FACTOR = 4.6; // roughly double the previous grow amount
+
+  function isolate(cell){
+    mode = 'transition';
+    selected = cell;
+    cell.hovered = false;
+    cell.wasHovered = false;
+    cell.jitter.set(0,0,0);
+    cell.jitterTarget.set(0,0,0);
+    cell.mesh.position.set(
+      wrap(cell.baseX - offset.x, viewW),
+      wrap(cell.baseY - offset.y, viewH),
+      0
+    );
+    hintEl.style.opacity = 0;
+    counterEl.style.opacity = 0;
+
+    const startScale = cell.mesh.scale.x;
+    const targetScale = cell.scaleBase * GROW_FACTOR;
+    const growDuration = 650;
+    const fadeDuration = 1050; // fade lags behind the grow, finishes slower
+    const t0 = performance.now();
+
+    function tween(){
+      const now = performance.now();
+      const tGrow = Math.min(1, (now - t0) / growDuration);
+      const tFade = Math.min(1, (now - t0) / fadeDuration);
+      const eGrow = 1 - Math.pow(1 - tGrow, 3);
+      const eFade = 1 - Math.pow(1 - tFade, 3);
+
+      cell.mesh.scale.setScalar(startScale + (targetScale - startScale) * eGrow);
+      cells.forEach(c => {
+        if(c !== selected) c.mesh.material.opacity = 1 - eFade;
+      });
+
+      if(tGrow < 1 || tFade < 1){
+        requestAnimationFrame(tween);
+      } else {
+        cells.forEach(c => { if(c !== selected) c.mesh.visible = false; });
+        enterInspectMode(cell, targetScale);
+      }
+    }
+    tween();
+  }
+
+  function enterInspectMode(cell, grownScale){
+    const fovRad = THREE.MathUtils.degToRad(inspectCamera.fov);
+    const matchDistance = viewH / (2 * Math.tan(fovRad / 2));
+
+    // Phase 1: position the perspective camera exactly like the orthographic
+    // grid camera was — centered on world origin, facing straight down -Z.
+    // At this pose the object stays in the exact screen position it was in
+    // a moment ago, so switching cameras here produces no visible jump.
+    inspectCamera.position.set(0, 0, matchDistance);
+    inspectCamera.quaternion.identity();
+    mode = 'isolated'; // render loop now uses inspectCamera
+
+    // Phase 2: glide the camera from that pose to one centered on + looking
+    // at the object, so it settles into frame instead of snapping there.
+    const startPos = inspectCamera.position.clone();
+    const startQuat = inspectCamera.quaternion.clone();
+
+    const endPos = new THREE.Vector3(
+      cell.mesh.position.x, cell.mesh.position.y, cell.mesh.position.z + matchDistance
+    );
+    const m = new THREE.Matrix4().lookAt(endPos, cell.mesh.position, new THREE.Vector3(0,1,0));
+    const endQuat = new THREE.Quaternion().setFromRotationMatrix(m);
+
+    const duration = 500;
+    const t0 = performance.now();
+
+    function settle(){
+      const t = Math.min(1, (performance.now() - t0) / duration);
+      const e = 1 - Math.pow(1 - t, 3);
+      inspectCamera.position.lerpVectors(startPos, endPos, e);
+      inspectCamera.quaternion.slerpQuaternions(startQuat, endQuat, e);
+
+      if(t < 1){
+        requestAnimationFrame(settle);
+      } else {
+        orbitControls = new THREE.OrbitControls(inspectCamera, renderer.domElement);
+        orbitControls.target.copy(cell.mesh.position);
+        orbitControls.enableDamping = true;
+        orbitControls.dampingFactor = 0.08;
+        orbitControls.minDistance = matchDistance * 0.12;
+        orbitControls.maxDistance = matchDistance * 3;
+        orbitControls.update();
+        returnHintEl.classList.add('show');
+      }
+    }
+    settle();
+  }
+
+  function returnToGrid(){
+    if(mode !== 'isolated') return;
+    if(orbitControls){ orbitControls.dispose(); orbitControls = null; }
+    returnHintEl.classList.remove('show');
+    mode = 'transition';
+    cells.forEach(c => { if(c !== selected) c.mesh.visible = true; });
+
+    const cell = selected;
+    const startScale = cell.mesh.scale.x;
+    const targetScale = cell.scaleBase;
+    const duration = 550;
+    const t0 = performance.now();
+
+    function tween(){
+      const t = Math.min(1, (performance.now() - t0) / duration);
+      const e = 1 - Math.pow(1 - t, 3);
+
+      cell.mesh.scale.setScalar(startScale + (targetScale - startScale) * e);
+      cells.forEach(c => {
+        if(c !== selected) c.mesh.material.opacity = e;
+      });
+
+      if(t < 1){
+        requestAnimationFrame(tween);
+      } else {
+        selected = null;
+        mode = 'grid';
+        hintEl.style.opacity = 1;
+        counterEl.style.opacity = 1;
+      }
+    }
+    tween();
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape') returnToGrid();
+  });
+  // click on the exposed black background (nothing hit) while isolated -> return
+  stage.addEventListener('pointerup', (e) => {
+    if(mode !== 'isolated') return;
+    const dist = Math.hypot(e.clientX - downX, e.clientY - downY);
+    if(dist >= 6) return;
+    setNdc(e);
+    raycaster.setFromCamera(ndc, inspectCamera);
+    const hits = raycaster.intersectObject(selected.mesh);
+    if(!hits.length) returnToGrid();
+  });
+
+  /* ---------------- RESIZE ---------------- */
+  function onResize(){
+    viewW = window.innerWidth;
+    viewH = window.innerHeight;
+
+    gridCamera.left = -viewW/2; gridCamera.right = viewW/2;
+    gridCamera.top = viewH/2; gridCamera.bottom = -viewH/2;
+    gridCamera.updateProjectionMatrix();
+
+    inspectCamera.aspect = viewW/viewH;
+    inspectCamera.updateProjectionMatrix();
+
+    renderer.setSize(viewW, viewH);
+    if(mode === 'grid'){
+      buildGrid();
+      applyColorScheme();
+    }
+  }
+  window.addEventListener('resize', onResize);
+
+  /* ---------------- RENDER LOOP ---------------- */
+  let lastT = performance.now();
+  function animate(now){
+    requestAnimationFrame(animate);
+    const dt = Math.min(64, now - lastT);
+    lastT = now;
+
+    cells.forEach(c => {
+      if(mode !== 'grid' && c === selected) return;
+      c.mesh.rotation.x += c.entry.spin * 0.01;
+      c.mesh.rotation.y += c.entry.spin * 0.014;
+    });
+
+    if(mode === 'grid'){
+      if(!dragging && (Math.abs(inertia.x) > INERTIA_EPSILON || Math.abs(inertia.y) > INERTIA_EPSILON)){
+        offset.x -= inertia.x;
+        offset.y += inertia.y;
+        inertia.x *= FRICTION;
+        inertia.y *= FRICTION;
+      } else if(!dragging){
+        inertia.x = 0; inertia.y = 0;
+      }
+      applyPositions(dt);
+    }
+
+    if(mode === 'isolated'){
+      if(orbitControls) orbitControls.update();
+      renderer.render(scene, inspectCamera);
+    } else {
+      renderer.render(scene, gridCamera);
+    }
+  }
+
+  onResize();
+  requestAnimationFrame(animate);
+</script>
 </body>
 </html>
