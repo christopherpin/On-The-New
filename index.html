@@ -204,7 +204,7 @@
 
   function applyColorScheme(){
     scene.background.set(colorsInverted ? COLOR_INVERTED_BG : COLOR_NORMAL_BG);
-    cells.forEach(c => c.mesh.material.color.set(colorsInverted ? COLOR_INVERTED_OBJ : COLOR_NORMAL_OBJ));
+    cells.forEach(c => c.materials.forEach(m => m.color.set(colorsInverted ? COLOR_INVERTED_OBJ : COLOR_NORMAL_OBJ)));
   }
 
   let viewW = window.innerWidth;
@@ -233,59 +233,66 @@
 
   const cells = []; // { mesh, baseX, baseY, hovered, jitter, jitterTarget, scaleBase, scaleCurrent }
 
-  const objLoader = new THREE.OBJLoader();
-  const modelCache = {}; // url -> merged BufferGeometry, so repeats of the same model don't refetch
-
-  function applyLoadedGeometry(mesh, geometry){
-    geometry.computeVertexNormals(); // normalize shading regardless of source mesh quality
-    mesh.geometry.dispose();
-    mesh.geometry = geometry;
+  function makeMaterial(){
+    return new THREE.MeshStandardMaterial({
+      color: colorsInverted ? COLOR_INVERTED_OBJ : COLOR_NORMAL_OBJ,
+      roughness: 0.55, metalness: 0.08,
+      transparent: true, opacity: 1, depthWrite: false
+    });
   }
 
-  function fetchModelGeometry(url, onReady){
-    if(modelCache[url]){ onReady(modelCache[url]); return; }
+  const objLoader = new THREE.OBJLoader();
+  const modelCache = {}; // url -> raw loaded THREE.Group (cloned per use, never mutated directly)
+
+  function fetchModelObject(url, onReady){
+    if(modelCache[url]){ onReady(modelCache[url].clone()); return; }
     objLoader.load(url, (obj) => {
-      const geoms = [];
-      obj.traverse(child => {
-        if(child.isMesh && child.geometry){
-          const g = child.geometry.clone();
-          g.applyMatrix4(child.matrixWorld);
-          geoms.push(g);
-        }
-      });
-      let merged = geoms[0];
-      if(geoms.length > 1 && THREE.BufferGeometryUtils){
-        merged = THREE.BufferGeometryUtils.mergeBufferGeometries(geoms);
-      }
-      modelCache[url] = merged;
-      onReady(merged);
+      modelCache[url] = obj;
+      onReady(obj.clone());
     }, undefined, (err) => {
       console.error('Model failed to load:', url, err);
     });
   }
 
-  function loadCell(entry){
-    // Extension point: branch on entry.kind === 'model' and load with
-    // THREE.GLTFLoader/OBJLoader once real facade-ornament models exist.
+  function loadCell(entry, cellRef){
+    const group = new THREE.Group();
+
     if(entry.kind === 'model'){
-      const geom = placeholderGeoms[4]; // neutral placeholder shown while the real model loads
-      const mat = new THREE.MeshStandardMaterial({
-        color: 0x0A0A0A, roughness: 0.55, metalness: 0.08,
-        transparent: true, opacity: 1, depthWrite: false
+      const mat = makeMaterial();
+      const placeholderMesh = new THREE.Mesh(placeholderGeoms[4], mat);
+      group.add(placeholderMesh);
+      cellRef.materials = [mat];
+
+      fetchModelObject(entry.url, (obj) => {
+        group.remove(placeholderMesh);
+        placeholderMesh.geometry.dispose();
+
+        const newMats = [];
+        obj.traverse(child => {
+          if(child.isMesh && child.geometry){
+            child.geometry.computeVertexNormals(); // normalize shading regardless of source quality
+            const m = makeMaterial();
+            child.material = m;
+            newMats.push(m);
+            group.add(child);
+          }
+        });
+
+        if(newMats.length === 0){
+          console.error('Model file loaded but contained no usable mesh geometry:', entry.url);
+        }
+        cellRef.materials = newMats;
       });
-      const mesh = new THREE.Mesh(geom, mat);
-      fetchModelGeometry(entry.url, (geometry) => applyLoadedGeometry(mesh, geometry));
-      return mesh;
+
+      return group;
     }
 
-    const geom = placeholderGeoms[entry.shapeIndex];
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0x0A0A0A, roughness: 0.55, metalness: 0.08,
-      transparent: true, opacity: 1, depthWrite: false
-    });
-    const mesh = new THREE.Mesh(geom, mat);
+    const mat = makeMaterial();
+    const mesh = new THREE.Mesh(placeholderGeoms[entry.shapeIndex], mat);
     mesh.rotation.set(entry.rotSeed.x, entry.rotSeed.y, entry.rotSeed.z);
-    return mesh;
+    group.add(mesh);
+    cellRef.materials = [mat];
+    return group;
   }
 
   function buildGrid(){
@@ -300,21 +307,26 @@
       for(let col=0; col<GRID_COLS; col++){
         const idx = row*GRID_COLS + col;
         const entry = gridData[idx];
-        const mesh = loadCell(entry);
-        const scaleBase = cellBase;
-        mesh.scale.setScalar(scaleBase);
         const baseX = (col - (GRID_COLS-1)/2) * spacingX;
         const baseY = (row - (GRID_ROWS-1)/2) * spacingY;
-        mesh.position.set(baseX, baseY, 0);
-        scene.add(mesh);
-        cells.push({
-          mesh, entry, baseX, baseY, scaleBase,
+
+        const cellRef = {
+          entry, baseX, baseY, scaleBase: cellBase,
           hovered:false,
           wasHovered:false,
           jitter:new THREE.Vector3(0,0,0),
           jitterTarget:new THREE.Vector3(0,0,0),
-          scaleCurrent:1
-        });
+          scaleCurrent:1,
+          materials: []
+        };
+
+        const group = loadCell(entry, cellRef);
+        group.scale.setScalar(cellBase);
+        group.position.set(baseX, baseY, 0);
+        scene.add(group);
+        cellRef.mesh = group;
+
+        cells.push(cellRef);
       }
     }
   }
@@ -466,7 +478,7 @@
 
       cell.mesh.scale.setScalar(startScale + (targetScale - startScale) * eGrow);
       cells.forEach(c => {
-        if(c !== selected) c.mesh.material.opacity = 1 - eFade;
+        if(c !== selected) c.materials.forEach(m => m.opacity = 1 - eFade);
       });
 
       if(tGrow < 1 || tFade < 1){
@@ -546,7 +558,7 @@
 
       cell.mesh.scale.setScalar(startScale + (targetScale - startScale) * e);
       cells.forEach(c => {
-        if(c !== selected) c.mesh.material.opacity = e;
+        if(c !== selected) c.materials.forEach(m => m.opacity = e);
       });
 
       if(t < 1){
