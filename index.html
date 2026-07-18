@@ -107,6 +107,8 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
 <script>
   /* ---------------- LANDING DISMISS + INVERT ---------------- */
   const landing = document.getElementById('landing');
@@ -117,6 +119,21 @@
     e.preventDefault();
     landing.classList.toggle('inverted');
   });
+
+  /* ---------------- IDLE: return to landing after 60s of inactivity ---------------- */
+  let idleTimer = null;
+  function resetIdleTimer(){
+    clearTimeout(idleTimer);
+    if(landing.classList.contains('hidden')){
+      idleTimer = setTimeout(() => {
+        landing.classList.remove('hidden');
+      }, 60000);
+    }
+  }
+  ['mousemove','pointerdown','pointermove','pointerup','wheel','keydown'].forEach(evt => {
+    window.addEventListener(evt, resetIdleTimer, { passive:true });
+  });
+  document.getElementById('enter-word').addEventListener('click', resetIdleTimer);
 
   /* ---------------- GRID DATA -----------------------------------------
      225 cells (15 x 15). Each entry is a placeholder for now.
@@ -149,6 +166,21 @@
       rotSeed: new THREE.Vector3(Math.random(), Math.random(), Math.random()).multiplyScalar(Math.PI*2),
       spin: 0.05 + Math.random() * 0.16
     });
+  }
+
+  /* ---------------- REAL MODEL TEST SLOT -------------------------------
+     One uploaded, centered/normalized OBJ model dropped into the center
+     cell to test the load path. Needs to sit in a /models folder next
+     to index.html in the repo for the relative path below to work.
+  ----------------------------------------------------------------------*/
+  {
+    const testIdx = 7 * GRID_COLS + 7; // center cell
+    gridData[testIdx] = {
+      kind: 'model',
+      url: 'models/frommaya_03_centered.obj',
+      rotSeed: new THREE.Vector3(0,0,0),
+      spin: 0.06
+    };
   }
 
   /* ---------------- RENDERER / SCENES ---------------- */
@@ -201,9 +233,51 @@
 
   const cells = []; // { mesh, baseX, baseY, hovered, jitter, jitterTarget, scaleBase, scaleCurrent }
 
+  const objLoader = new THREE.OBJLoader();
+  const modelCache = {}; // url -> merged BufferGeometry, so repeats of the same model don't refetch
+
+  function applyLoadedGeometry(mesh, geometry){
+    geometry.computeVertexNormals(); // normalize shading regardless of source mesh quality
+    mesh.geometry.dispose();
+    mesh.geometry = geometry;
+  }
+
+  function fetchModelGeometry(url, onReady){
+    if(modelCache[url]){ onReady(modelCache[url]); return; }
+    objLoader.load(url, (obj) => {
+      const geoms = [];
+      obj.traverse(child => {
+        if(child.isMesh && child.geometry){
+          const g = child.geometry.clone();
+          g.applyMatrix4(child.matrixWorld);
+          geoms.push(g);
+        }
+      });
+      let merged = geoms[0];
+      if(geoms.length > 1 && THREE.BufferGeometryUtils){
+        merged = THREE.BufferGeometryUtils.mergeBufferGeometries(geoms);
+      }
+      modelCache[url] = merged;
+      onReady(merged);
+    }, undefined, (err) => {
+      console.error('Model failed to load:', url, err);
+    });
+  }
+
   function loadCell(entry){
     // Extension point: branch on entry.kind === 'model' and load with
-    // THREE.GLTFLoader once real facade-ornament models exist.
+    // THREE.GLTFLoader/OBJLoader once real facade-ornament models exist.
+    if(entry.kind === 'model'){
+      const geom = placeholderGeoms[4]; // neutral placeholder shown while the real model loads
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x0A0A0A, roughness: 0.55, metalness: 0.08,
+        transparent: true, opacity: 1, depthWrite: false
+      });
+      const mesh = new THREE.Mesh(geom, mat);
+      fetchModelGeometry(entry.url, (geometry) => applyLoadedGeometry(mesh, geometry));
+      return mesh;
+    }
+
     const geom = placeholderGeoms[entry.shapeIndex];
     const mat = new THREE.MeshStandardMaterial({
       color: 0x0A0A0A, roughness: 0.55, metalness: 0.08,
@@ -328,7 +402,7 @@
   /* ---------------- CLICK vs DRAG-PAN ---------------- */
   let dragging = false, downX=0, downY=0, lastX=0, lastY=0;
   const inertia = { x: 0, y: 0 };
-  const FRICTION = 0.90;
+  const FRICTION = 0.965;
   const INERTIA_EPSILON = 0.03;
 
   stage.addEventListener('pointerdown', (e) => {
