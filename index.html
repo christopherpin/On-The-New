@@ -90,6 +90,26 @@
     transition:opacity .3s ease;
   }
   .return-hint.show{ opacity:1; }
+
+  .nav-mark{
+    position:fixed; z-index:15;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    color:#FFFFFF;
+    font-size:30px;
+    line-height:1;
+    text-decoration:none;
+    background:none;
+    border:none;
+    cursor:pointer;
+    user-select:none;
+    padding:4px;
+    opacity:0.9;
+    transition:opacity .2s ease;
+  }
+  .nav-mark:hover{ opacity:1; }
+  #nav-home{ top:20px; left:24px; }
+  #nav-map{ bottom:20px; right:24px; }
 </style>
 </head>
 <body>
@@ -100,6 +120,8 @@
 
 <div id="grid-stage">
   <canvas id="grid-canvas"></canvas>
+  <button class="nav-mark" id="nav-home">N</button>
+  <a class="nav-mark" id="nav-map" href="map-test/index.html">M</a>
   <div class="hint" id="hint">Scroll or drag to explore &middot; 225 facade details, Washington Heights (placeholder)</div>
   <div class="counter" id="counter">15 &times; 15 grid</div>
   <div class="return-hint" id="return-hint">Esc &middot; click background to return</div>
@@ -118,6 +140,10 @@
   landing.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     landing.classList.toggle('inverted');
+  });
+
+  document.getElementById('nav-home').addEventListener('click', () => {
+    landing.classList.remove('hidden');
   });
 
   /* ---------------- IDLE: return to landing after 60s of inactivity ---------------- */
@@ -279,7 +305,11 @@
         });
 
         if(newMats.length === 0){
-          console.error('Model file loaded but contained no usable mesh geometry:', entry.url);
+          console.error(
+            'Model file loaded but contained no usable mesh geometry:', entry.url,
+            '— top-level children found:', obj.children.length,
+            '— types:', obj.children.map(c => c.type)
+          );
         }
         cellRef.materials = newMats;
       });
@@ -378,9 +408,16 @@
 
   function meshUnderPointer(camera){
     raycaster.setFromCamera(ndc, camera);
-    const hits = raycaster.intersectObjects(cells.map(c => c.mesh));
+    const hits = raycaster.intersectObjects(cells.map(c => c.mesh), true);
     if(!hits.length) return null;
-    return cells.find(c => c.mesh === hits[0].object) || null;
+    // hits[0].object is whichever child mesh was actually hit inside a cell's
+    // Group wrapper — walk up to that top-level group (parented directly to
+    // the scene) so it matches what's stored as c.mesh.
+    let obj = hits[0].object;
+    while(obj && obj.parent !== scene){
+      obj = obj.parent;
+    }
+    return cells.find(c => c.mesh === obj) || null;
   }
 
   /* ---------------- HOVER (grid mode only) ---------------- */
@@ -418,6 +455,7 @@
   const INERTIA_EPSILON = 0.03;
 
   stage.addEventListener('pointerdown', (e) => {
+    if(e.target.closest('.nav-mark')) return;
     downX = lastX = e.clientX; downY = lastY = e.clientY;
     inertia.x = 0; inertia.y = 0;
     if(mode === 'grid'){ dragging = true; stage.classList.add('dragging'); }
@@ -434,6 +472,7 @@
   });
 
   window.addEventListener('pointerup', (e) => {
+    if(e.target.closest('.nav-mark')) return;
     const dist = Math.hypot(e.clientX - downX, e.clientY - downY);
     if(mode === 'grid' && dist < 6){
       setNdc(e);
@@ -578,6 +617,7 @@
   });
   // click on the exposed black background (nothing hit) while isolated -> return
   stage.addEventListener('pointerup', (e) => {
+    if(e.target.closest('.nav-mark')) return;
     if(mode !== 'isolated') return;
     const dist = Math.hypot(e.clientX - downX, e.clientY - downY);
     if(dist >= 6) return;
