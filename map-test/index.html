@@ -1,1 +1,688 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>On The New</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --yellow:#F5C518;
+    --black:#0A0A0A;
+    --canary:#FFE135;
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html, body{
+    width:100%; height:100%;
+    overflow:hidden; /* the grid page is a pannable canvas, not a scrolling document */
+    background:var(--black);
+    font-family:'JetBrains Mono', monospace;
+  }
+
+  /* ---------------- LANDING ---------------- */
+  #landing{
+    position:fixed; inset:0; z-index:20;
+    background:var(--yellow);
+    display:flex; align-items:center; justify-content:center;
+    transition: opacity .6s ease, visibility .6s ease;
+  }
+  #landing.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+
+  .landing-title{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:400;
+    text-align:center;
+    line-height:1.0;
+    font-size:clamp(48px, 9vw, 116px);
+    letter-spacing:-0.01em;
+    color:var(--black);
+  }
+
+  .word-trigger{
+    all:unset;
+    display:inline-block;
+    cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    color:var(--black);
+    border-bottom:4px solid transparent;
+    transition: border-color .25s ease, opacity .25s ease;
+  }
+  .word-trigger:hover, .word-trigger:focus-visible{
+    border-bottom-color:var(--black);
+    opacity:0.7;
+  }
+
+  #landing.inverted{ background:var(--black); }
+  #landing.inverted .landing-title{ color:var(--canary); }
+  #landing.inverted .word-trigger{ color:var(--canary); }
+  #landing.inverted .word-trigger:hover, #landing.inverted .word-trigger:focus-visible{
+    border-bottom-color:var(--canary);
+    opacity:0.75;
+  }
+
+  /* ---------------- GRID STAGE ---------------- */
+  #grid-stage{
+    position:fixed; inset:0; z-index:10;
+    background:var(--black);
+    cursor:grab;
+  }
+  #grid-stage.dragging{ cursor:grabbing; }
+  #grid-canvas{ display:block; width:100%; height:100%; }
+
+  .hint{
+    position:fixed; bottom:22px; left:26px; z-index:11;
+    color:rgba(245,197,24,0.65);
+    font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    transition:opacity .3s ease;
+  }
+  .counter{
+    position:fixed; bottom:22px; right:26px; z-index:11;
+    color:rgba(245,197,24,0.65);
+    font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    transition:opacity .3s ease;
+  }
+  .return-hint{
+    position:fixed; top:22px; left:26px; z-index:11;
+    color:rgba(245,197,24,0.75);
+    font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    opacity:0; pointer-events:none;
+    transition:opacity .3s ease;
+  }
+  .return-hint.show{ opacity:1; }
+
+  .nav-mark{
+    position:fixed; z-index:15;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    color:#FFFFFF;
+    font-size:30px;
+    line-height:1;
+    text-decoration:none;
+    background:none;
+    border:none;
+    cursor:pointer;
+    user-select:none;
+    padding:4px;
+    opacity:0.9;
+    transition:opacity .2s ease;
+  }
+  .nav-mark:hover{ opacity:1; }
+  #nav-home{ top:20px; left:24px; }
+  #nav-map{ bottom:20px; right:24px; }
+</style>
+</head>
+<body>
+
+<div id="landing">
+  <h1 class="landing-title">On The<br><button class="word-trigger" id="enter-word">New</button></h1>
+</div>
+
+<div id="grid-stage">
+  <canvas id="grid-canvas"></canvas>
+  <button class="nav-mark" id="nav-home">N</button>
+  <a class="nav-mark" id="nav-map" href="map-test/index.html">M</a>
+  <div class="hint" id="hint">Scroll or drag to explore &middot; 225 facade details, Washington Heights (placeholder)</div>
+  <div class="counter" id="counter">15 &times; 15 grid</div>
+  <div class="return-hint" id="return-hint">Esc &middot; click background to return</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
+<script>
+  /* ---------------- LANDING DISMISS + INVERT ---------------- */
+  const landing = document.getElementById('landing');
+  document.getElementById('enter-word').addEventListener('click', () => {
+    landing.classList.add('hidden');
+  });
+  landing.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    landing.classList.toggle('inverted');
+  });
+
+  document.getElementById('nav-home').addEventListener('click', () => {
+    landing.classList.remove('hidden');
+  });
+
+  /* ---------------- IDLE: return to landing after 60s of inactivity ---------------- */
+  let idleTimer = null;
+  function resetIdleTimer(){
+    clearTimeout(idleTimer);
+    if(landing.classList.contains('hidden')){
+      idleTimer = setTimeout(() => {
+        landing.classList.remove('hidden');
+      }, 60000);
+    }
+  }
+  ['mousemove','pointerdown','pointermove','pointerup','wheel','keydown'].forEach(evt => {
+    window.addEventListener(evt, resetIdleTimer, { passive:true });
+  });
+  document.getElementById('enter-word').addEventListener('click', resetIdleTimer);
+
+  /* ---------------- GRID DATA -----------------------------------------
+     225 cells (15 x 15). Each entry is a placeholder for now.
+     Later: swap an entry's { kind:'placeholder' } for
+     { kind:'model', url:'models/your-file.glb' } and loadCell() below
+     will need a GLTFLoader branch added — the array shape is already
+     set up so that's a drop-in change, not a restructure.
+  ----------------------------------------------------------------------*/
+  const GRID_COLS = 15;
+  const GRID_ROWS = 15;
+  const CELL_COUNT = GRID_COLS * GRID_ROWS;
+
+  const gridData = [];
+  for(let i=0; i<CELL_COUNT; i++){
+    const col = i % GRID_COLS;
+    const row = Math.floor(i / GRID_COLS);
+    const forbidden = new Set();
+    if(col > 0) forbidden.add(gridData[i-1].shapeIndex);                         // left
+    if(row > 0) forbidden.add(gridData[i-GRID_COLS].shapeIndex);                 // top
+    if(col > 0 && row > 0) forbidden.add(gridData[i-GRID_COLS-1].shapeIndex);    // top-left
+    if(col < GRID_COLS-1 && row > 0) forbidden.add(gridData[i-GRID_COLS+1].shapeIndex); // top-right
+
+    let choices = [0,1,2,3,4].filter(s => !forbidden.has(s));
+    if(choices.length === 0) choices = [0,1,2,3,4];
+    const shapeIndex = choices[Math.floor(Math.random() * choices.length)];
+
+    gridData.push({
+      kind: 'placeholder',
+      shapeIndex,
+      rotSeed: new THREE.Vector3(Math.random(), Math.random(), Math.random()).multiplyScalar(Math.PI*2),
+      spin: 0.05 + Math.random() * 0.16
+    });
+  }
+
+  /* ---------------- REAL MODEL TEST SLOT -------------------------------
+     One uploaded, centered/normalized OBJ model dropped into the center
+     cell to test the load path. Needs to sit in a /models folder next
+     to index.html in the repo for the relative path below to work.
+  ----------------------------------------------------------------------*/
+  {
+    const testIdx = 7 * GRID_COLS + 7; // center cell
+    gridData[testIdx] = {
+      kind: 'model',
+      url: 'models/frommaya_03_centered.obj',
+      rotSeed: new THREE.Vector3(0,0,0),
+      spin: 0.06
+    };
+  }
+
+  /* ---------------- RENDERER / SCENES ---------------- */
+  const canvas = document.getElementById('grid-canvas');
+  const stage = document.getElementById('grid-stage');
+  const hintEl = document.getElementById('hint');
+  const counterEl = document.getElementById('counter');
+  const returnHintEl = document.getElementById('return-hint');
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xF5C518);
+
+  const COLOR_NORMAL_BG = 0xF5C518;
+  const COLOR_NORMAL_OBJ = 0x0A0A0A;
+  const COLOR_INVERTED_BG = 0x0A0A0A;
+  const COLOR_INVERTED_OBJ = 0xFFE135;
+  let colorsInverted = false;
+
+  function applyColorScheme(){
+    scene.background.set(colorsInverted ? COLOR_INVERTED_BG : COLOR_NORMAL_BG);
+    cells.forEach(c => c.materials.forEach(m => m.color.set(colorsInverted ? COLOR_INVERTED_OBJ : COLOR_NORMAL_OBJ)));
+  }
+
+  let viewW = window.innerWidth;
+  let viewH = window.innerHeight;
+
+  const gridCamera = new THREE.OrthographicCamera(-viewW/2, viewW/2, viewH/2, -viewH/2, 0.1, 3000);
+  gridCamera.position.z = 1000;
+
+  const inspectCamera = new THREE.PerspectiveCamera(45, viewW/viewH, 0.1, 3000);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(200, 300, 500);
+  scene.add(key);
+  const rim = new THREE.DirectionalLight(0xF5C518, 0.35);
+  rim.position.set(-300, -200, 200);
+  scene.add(rim);
+
+  const placeholderGeoms = [
+    new THREE.BoxGeometry(1.7, 1.7, 1.7),
+    new THREE.IcosahedronGeometry(1.15, 0),
+    new THREE.TorusGeometry(1, 0.4, 16, 40),
+    new THREE.ConeGeometry(1.1, 1.7, 24),
+    new THREE.SphereGeometry(1.15, 24, 18)
+  ];
+
+  const cells = []; // { mesh, baseX, baseY, hovered, jitter, jitterTarget, scaleBase, scaleCurrent }
+
+  function makeMaterial(){
+    return new THREE.MeshStandardMaterial({
+      color: colorsInverted ? COLOR_INVERTED_OBJ : COLOR_NORMAL_OBJ,
+      roughness: 0.55, metalness: 0.08,
+      transparent: true, opacity: 1, depthWrite: false
+    });
+  }
+
+  const objLoader = new THREE.OBJLoader();
+  const modelCache = {}; // url -> raw loaded THREE.Group (cloned per use, never mutated directly)
+
+  function fetchModelObject(url, onReady){
+    if(modelCache[url]){ onReady(modelCache[url].clone()); return; }
+    objLoader.load(url, (obj) => {
+      modelCache[url] = obj;
+      onReady(obj.clone());
+    }, undefined, (err) => {
+      console.error('Model failed to load:', url, err);
+    });
+  }
+
+  function loadCell(entry, cellRef){
+    const group = new THREE.Group();
+
+    if(entry.kind === 'model'){
+      const mat = makeMaterial();
+      const placeholderMesh = new THREE.Mesh(placeholderGeoms[4], mat);
+      group.add(placeholderMesh);
+      cellRef.materials = [mat];
+
+      fetchModelObject(entry.url, (obj) => {
+        group.remove(placeholderMesh);
+        placeholderMesh.geometry.dispose();
+
+        const newMats = [];
+        obj.traverse(child => {
+          if(child.isMesh && child.geometry){
+            child.geometry.computeVertexNormals(); // normalize shading regardless of source quality
+            const m = makeMaterial();
+            child.material = m;
+            newMats.push(m);
+            group.add(child);
+          }
+        });
+
+        if(newMats.length === 0){
+          console.error(
+            'Model file loaded but contained no usable mesh geometry:', entry.url,
+            '— top-level children found:', obj.children.length,
+            '— types:', obj.children.map(c => c.type)
+          );
+        }
+        cellRef.materials = newMats;
+      });
+
+      return group;
+    }
+
+    const mat = makeMaterial();
+    const mesh = new THREE.Mesh(placeholderGeoms[entry.shapeIndex], mat);
+    mesh.rotation.set(entry.rotSeed.x, entry.rotSeed.y, entry.rotSeed.z);
+    group.add(mesh);
+    cellRef.materials = [mat];
+    return group;
+  }
+
+  function buildGrid(){
+    cells.forEach(c => scene.remove(c.mesh));
+    cells.length = 0;
+
+    const spacingX = viewW / GRID_COLS;
+    const spacingY = viewH / GRID_ROWS;
+    const cellBase = Math.min(spacingX, spacingY) * 0.32;
+
+    for(let row=0; row<GRID_ROWS; row++){
+      for(let col=0; col<GRID_COLS; col++){
+        const idx = row*GRID_COLS + col;
+        const entry = gridData[idx];
+        const baseX = (col - (GRID_COLS-1)/2) * spacingX;
+        const baseY = (row - (GRID_ROWS-1)/2) * spacingY;
+
+        const cellRef = {
+          entry, baseX, baseY, scaleBase: cellBase,
+          hovered:false,
+          wasHovered:false,
+          jitter:new THREE.Vector3(0,0,0),
+          jitterTarget:new THREE.Vector3(0,0,0),
+          scaleCurrent:1,
+          materials: []
+        };
+
+        const group = loadCell(entry, cellRef);
+        group.scale.setScalar(cellBase);
+        group.position.set(baseX, baseY, 0);
+        scene.add(group);
+        cellRef.mesh = group;
+
+        cells.push(cellRef);
+      }
+    }
+  }
+
+  /* ---------------- PAN + INFINITE WRAP ---------------- */
+  const offset = { x: 0, y: 0 };
+
+  function wrap(value, full){
+    return ((value + full/2) % full + full) % full - full/2;
+  }
+
+  function applyPositions(dt){
+    const fullW = viewW;
+    const fullH = viewH;
+    cells.forEach(c => {
+      if(mode !== 'grid' && c === selected) return; // frozen while isolated
+
+      // jitter: a single nudge on hover-enter, then it holds still until hover ends
+      if(c.hovered && !c.wasHovered){
+        const r = Math.min(fullW, fullH) * 0.035;
+        c.jitterTarget.set((Math.random()-0.5)*r, (Math.random()-0.5)*r, Math.random()*22);
+      } else if(!c.hovered){
+        c.jitterTarget.set(0,0,0);
+      }
+      c.wasHovered = c.hovered;
+      c.jitter.lerp(c.jitterTarget, 0.12);
+      c.scaleCurrent += ((c.hovered ? 1.22 : 1) - c.scaleCurrent) * 0.15;
+
+      const wx = wrap(c.baseX - offset.x, fullW);
+      const wy = wrap(c.baseY - offset.y, fullH);
+      c.mesh.position.set(wx + c.jitter.x, wy + c.jitter.y, c.jitter.z);
+      c.mesh.scale.setScalar(c.scaleBase * c.scaleCurrent);
+    });
+  }
+
+  /* ---------------- MODE STATE ---------------- */
+  let mode = 'grid'; // 'grid' | 'transition' | 'isolated'
+  let selected = null;
+  let orbitControls = null;
+
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+
+  function setNdc(e){
+    const r = canvas.getBoundingClientRect();
+    ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+    ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  }
+
+  function meshUnderPointer(camera){
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObjects(cells.map(c => c.mesh), true);
+    if(!hits.length) return null;
+    // hits[0].object is whichever child mesh was actually hit inside a cell's
+    // Group wrapper — walk up to that top-level group (parented directly to
+    // the scene) so it matches what's stored as c.mesh.
+    let obj = hits[0].object;
+    while(obj && obj.parent !== scene){
+      obj = obj.parent;
+    }
+    return cells.find(c => c.mesh === obj) || null;
+  }
+
+  /* ---------------- HOVER (grid mode only) ---------------- */
+  stage.addEventListener('mousemove', (e) => {
+    if(mode !== 'grid') return;
+    setNdc(e);
+    const hit = meshUnderPointer(gridCamera);
+    cells.forEach(c => { c.hovered = (c === hit); });
+  });
+  stage.addEventListener('mouseleave', () => {
+    cells.forEach(c => { c.hovered = false; });
+  });
+
+  /* ---------------- RIGHT-CLICK: INVERT COLOR SCHEME ---------------- */
+  stage.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    colorsInverted = !colorsInverted;
+    applyColorScheme();
+  });
+
+  /* ---------------- WHEEL: pan grid, or dolly-zoom when isolated ---------------- */
+  stage.addEventListener('wheel', (e) => {
+    if(mode === 'grid'){
+      e.preventDefault();
+      offset.x += e.deltaX;
+      offset.y += e.deltaY;
+    }
+    // when isolated, OrbitControls' own wheel listener handles zoom
+  }, { passive:false });
+
+  /* ---------------- CLICK vs DRAG-PAN ---------------- */
+  let dragging = false, downX=0, downY=0, lastX=0, lastY=0;
+  const inertia = { x: 0, y: 0 };
+  const FRICTION = 0.965;
+  const INERTIA_EPSILON = 0.03;
+
+  stage.addEventListener('pointerdown', (e) => {
+    if(e.target.closest('.nav-mark')) return;
+    downX = lastX = e.clientX; downY = lastY = e.clientY;
+    inertia.x = 0; inertia.y = 0;
+    if(mode === 'grid'){ dragging = true; stage.classList.add('dragging'); }
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if(!dragging || mode !== 'grid') return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    offset.x -= dx;
+    offset.y += dy;
+    inertia.x = dx;
+    inertia.y = dy;
+  });
+
+  window.addEventListener('pointerup', (e) => {
+    if(e.target.closest('.nav-mark')) return;
+    const dist = Math.hypot(e.clientX - downX, e.clientY - downY);
+    if(mode === 'grid' && dist < 6){
+      setNdc(e);
+      const hit = meshUnderPointer(gridCamera);
+      if(hit) isolate(hit);
+      inertia.x = 0; inertia.y = 0;
+    }
+    dragging = false;
+    stage.classList.remove('dragging');
+  });
+
+  /* ---------------- ISOLATE / ORBIT TRANSITION ---------------- */
+  const GROW_FACTOR = 4.6; // roughly double the previous grow amount
+
+  function isolate(cell){
+    mode = 'transition';
+    selected = cell;
+    cell.hovered = false;
+    cell.wasHovered = false;
+    cell.jitter.set(0,0,0);
+    cell.jitterTarget.set(0,0,0);
+    cell.mesh.position.set(
+      wrap(cell.baseX - offset.x, viewW),
+      wrap(cell.baseY - offset.y, viewH),
+      0
+    );
+    hintEl.style.opacity = 0;
+    counterEl.style.opacity = 0;
+
+    const startScale = cell.mesh.scale.x;
+    const targetScale = cell.scaleBase * GROW_FACTOR;
+    const growDuration = 650;
+    const fadeDuration = 1050; // fade lags behind the grow, finishes slower
+    const t0 = performance.now();
+
+    function tween(){
+      const now = performance.now();
+      const tGrow = Math.min(1, (now - t0) / growDuration);
+      const tFade = Math.min(1, (now - t0) / fadeDuration);
+      const eGrow = 1 - Math.pow(1 - tGrow, 3);
+      const eFade = 1 - Math.pow(1 - tFade, 3);
+
+      cell.mesh.scale.setScalar(startScale + (targetScale - startScale) * eGrow);
+      cells.forEach(c => {
+        if(c !== selected) c.materials.forEach(m => m.opacity = 1 - eFade);
+      });
+
+      if(tGrow < 1 || tFade < 1){
+        requestAnimationFrame(tween);
+      } else {
+        cells.forEach(c => { if(c !== selected) c.mesh.visible = false; });
+        enterInspectMode(cell, targetScale);
+      }
+    }
+    tween();
+  }
+
+  function enterInspectMode(cell, grownScale){
+    const fovRad = THREE.MathUtils.degToRad(inspectCamera.fov);
+    const matchDistance = viewH / (2 * Math.tan(fovRad / 2));
+
+    // Phase 1: position the perspective camera exactly like the orthographic
+    // grid camera was — centered on world origin, facing straight down -Z.
+    // At this pose the object stays in the exact screen position it was in
+    // a moment ago, so switching cameras here produces no visible jump.
+    inspectCamera.position.set(0, 0, matchDistance);
+    inspectCamera.quaternion.identity();
+    mode = 'isolated'; // render loop now uses inspectCamera
+
+    // Phase 2: glide the camera from that pose to one centered on + looking
+    // at the object, so it settles into frame instead of snapping there.
+    const startPos = inspectCamera.position.clone();
+    const startQuat = inspectCamera.quaternion.clone();
+
+    const endPos = new THREE.Vector3(
+      cell.mesh.position.x, cell.mesh.position.y, cell.mesh.position.z + matchDistance
+    );
+    const m = new THREE.Matrix4().lookAt(endPos, cell.mesh.position, new THREE.Vector3(0,1,0));
+    const endQuat = new THREE.Quaternion().setFromRotationMatrix(m);
+
+    const duration = 500;
+    const t0 = performance.now();
+
+    function settle(){
+      const t = Math.min(1, (performance.now() - t0) / duration);
+      const e = 1 - Math.pow(1 - t, 3);
+      inspectCamera.position.lerpVectors(startPos, endPos, e);
+      inspectCamera.quaternion.slerpQuaternions(startQuat, endQuat, e);
+
+      if(t < 1){
+        requestAnimationFrame(settle);
+      } else {
+        orbitControls = new THREE.OrbitControls(inspectCamera, renderer.domElement);
+        orbitControls.target.copy(cell.mesh.position);
+        orbitControls.enableDamping = true;
+        orbitControls.dampingFactor = 0.08;
+        orbitControls.minDistance = matchDistance * 0.12;
+        orbitControls.maxDistance = matchDistance * 3;
+        orbitControls.update();
+        returnHintEl.classList.add('show');
+      }
+    }
+    settle();
+  }
+
+  function returnToGrid(){
+    if(mode !== 'isolated') return;
+    if(orbitControls){ orbitControls.dispose(); orbitControls = null; }
+    returnHintEl.classList.remove('show');
+    mode = 'transition';
+    cells.forEach(c => { if(c !== selected) c.mesh.visible = true; });
+
+    const cell = selected;
+    const startScale = cell.mesh.scale.x;
+    const targetScale = cell.scaleBase;
+    const duration = 550;
+    const t0 = performance.now();
+
+    function tween(){
+      const t = Math.min(1, (performance.now() - t0) / duration);
+      const e = 1 - Math.pow(1 - t, 3);
+
+      cell.mesh.scale.setScalar(startScale + (targetScale - startScale) * e);
+      cells.forEach(c => {
+        if(c !== selected) c.materials.forEach(m => m.opacity = e);
+      });
+
+      if(t < 1){
+        requestAnimationFrame(tween);
+      } else {
+        selected = null;
+        mode = 'grid';
+        hintEl.style.opacity = 1;
+        counterEl.style.opacity = 1;
+      }
+    }
+    tween();
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape') returnToGrid();
+  });
+  // click on the exposed black background (nothing hit) while isolated -> return
+  stage.addEventListener('pointerup', (e) => {
+    if(e.target.closest('.nav-mark')) return;
+    if(mode !== 'isolated') return;
+    const dist = Math.hypot(e.clientX - downX, e.clientY - downY);
+    if(dist >= 6) return;
+    setNdc(e);
+    raycaster.setFromCamera(ndc, inspectCamera);
+    const hits = raycaster.intersectObject(selected.mesh);
+    if(!hits.length) returnToGrid();
+  });
+
+  /* ---------------- RESIZE ---------------- */
+  function onResize(){
+    viewW = window.innerWidth;
+    viewH = window.innerHeight;
+
+    gridCamera.left = -viewW/2; gridCamera.right = viewW/2;
+    gridCamera.top = viewH/2; gridCamera.bottom = -viewH/2;
+    gridCamera.updateProjectionMatrix();
+
+    inspectCamera.aspect = viewW/viewH;
+    inspectCamera.updateProjectionMatrix();
+
+    renderer.setSize(viewW, viewH);
+    if(mode === 'grid'){
+      buildGrid();
+      applyColorScheme();
+    }
+  }
+  window.addEventListener('resize', onResize);
+
+  /* ---------------- RENDER LOOP ---------------- */
+  let lastT = performance.now();
+  function animate(now){
+    requestAnimationFrame(animate);
+    const dt = Math.min(64, now - lastT);
+    lastT = now;
+
+    cells.forEach(c => {
+      if(mode !== 'grid' && c === selected) return;
+      c.mesh.rotation.x += c.entry.spin * 0.01;
+      c.mesh.rotation.y += c.entry.spin * 0.014;
+    });
+
+    if(mode === 'grid'){
+      if(!dragging && (Math.abs(inertia.x) > INERTIA_EPSILON || Math.abs(inertia.y) > INERTIA_EPSILON)){
+        offset.x -= inertia.x;
+        offset.y += inertia.y;
+        inertia.x *= FRICTION;
+        inertia.y *= FRICTION;
+      } else if(!dragging){
+        inertia.x = 0; inertia.y = 0;
+      }
+      applyPositions(dt);
+    }
+
+    if(mode === 'isolated'){
+      if(orbitControls) orbitControls.update();
+      renderer.render(scene, inspectCamera);
+    } else {
+      renderer.render(scene, gridCamera);
+    }
+  }
+
+  onResize();
+  requestAnimationFrame(animate);
+</script>
+</body>
+</html>
