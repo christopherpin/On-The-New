@@ -8,30 +8,20 @@
   *{ margin:0; padding:0; box-sizing:border-box; }
   html, body{ width:100%; height:100%; overflow:hidden; background:#141414; font-family:sans-serif; }
 
-  #map-viewport{
-    position:fixed; inset:0;
-    overflow:hidden;
-    cursor:grab;
-    background:#141414;
-  }
+  #map-viewport{ position:fixed; inset:0; cursor:grab; }
   #map-viewport.dragging{ cursor:grabbing; }
-
-  #map-stage{
-    position:absolute;
-    top:0; left:0;
-    transform-origin: 0 0;
-  }
-
-  /* the injected SVG should size itself off its own viewBox, not fight it */
-  #map-stage svg{
-    display:block;
-    background:#fff; /* the drawing itself is white paper with colored linework */
-  }
+  #map-canvas{ display:block; width:100%; height:100%; }
 
   .hint{
     position:fixed; bottom:20px; left:20px; z-index:5;
     color:rgba(255,255,255,0.55);
     font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+    font-family:monospace;
+  }
+  .status{
+    position:fixed; bottom:20px; right:20px; z-index:5;
+    color:rgba(255,255,255,0.4);
+    font-size:11px; letter-spacing:0.05em;
     font-family:monospace;
   }
   .loading{
@@ -48,32 +38,119 @@
 <body>
 
 <div id="map-viewport">
-  <div id="map-stage"></div>
+  <canvas id="map-canvas"></canvas>
 </div>
-<div class="hint">Scroll to zoom &middot; drag to pan</div>
+<div class="hint">Scroll to zoom &middot; drag to pan &middot; double-click to reset</div>
+<div class="status" id="status"></div>
 <div class="loading" id="loading">Loading map&hellip;</div>
 
 <script>
   const viewport = document.getElementById('map-viewport');
-  const stage = document.getElementById('map-stage');
+  const canvas = document.getElementById('map-canvas');
+  const ctx = canvas.getContext('2d');
   const loadingEl = document.getElementById('loading');
+  const statusEl = document.getElementById('status');
 
+  let dpr = Math.min(window.devicePixelRatio || 1, 3);
+  let rawSvgText = null;
+  let mapW = 612, mapH = 792;
+
+  // Camera: `scale` = screen pixels per SVG unit. (originX, originY) = the
+  // SVG-space coordinate that lands at screen pixel (0,0).
   let scale = 1;
-  let tx = 0, ty = 0;
-  let svgW = 612, svgH = 792; // fallback until the real viewBox is read
+  let originX = 0, originY = 0;
 
-  function applyTransform(){
-    stage.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  // The last genuinely fresh high-res render, kept around so we can cheaply
+  // blit-and-transform it for instant feedback while actively dragging/zooming.
+  let lastCrisp = null; // { canvas, srcX, srcY, srcW, srcH }
+  let refreshTimer = null;
+  let dragging = false;
+
+  function resizeCanvas(){
+    canvas.width = Math.round(viewport.clientWidth * dpr);
+    canvas.height = Math.round(viewport.clientHeight * dpr);
   }
 
   function fitToScreen(){
-    const vw = viewport.clientWidth;
-    const vh = viewport.clientHeight;
-    const fitScale = Math.min(vw / svgW, vh / svgH) * 0.92;
-    scale = fitScale;
-    tx = (vw - svgW * scale) / 2;
-    ty = (vh - svgH * scale) / 2;
-    applyTransform();
+    const vw = viewport.clientWidth, vh = viewport.clientHeight;
+    scale = Math.min(vw / mapW, vh / mapH) * 0.92;
+    originX = mapW / 2 - (vw / 2) / scale;
+    originY = mapH / 2 - (vh / 2) / scale;
+    scheduleCrispRefresh(true);
+  }
+
+  function currentViewRect(){
+    const vw = viewport.clientWidth, vh = viewport.clientHeight;
+    return { srcX: originX, srcY: originY, srcW: vw / scale, srcH: vh / scale, vw, vh };
+  }
+
+  /* ---------------- CHEAP LIVE DRAW (during active drag/zoom) ---------------- */
+  function cheapDraw(){
+    const { srcX, srcY, srcW, srcH, vw, vh } = currentViewRect();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(0, 0, vw, vh);
+    if(!lastCrisp) return;
+
+    // Map the last crisp render (which covers lastCrisp.srcX/Y/W/H) onto the
+    // current view rect via simple proportional scaling — cheap bitmap blit,
+    // no SVG re-parsing, so this stays smooth regardless of file complexity.
+    const sx = (srcX - lastCrisp.srcX) / lastCrisp.srcW * lastCrisp.canvas.width;
+    const sy = (srcY - lastCrisp.srcY) / lastCrisp.srcH * lastCrisp.canvas.height;
+    const sw = (srcW / lastCrisp.srcW) * lastCrisp.canvas.width;
+    const sh = (srcH / lastCrisp.srcH) * lastCrisp.canvas.height;
+    ctx.drawImage(lastCrisp.canvas, sx, sy, sw, sh, 0, 0, vw, vh);
+
+    statusEl.textContent = 'refreshing…';
+  }
+
+  /* ---------------- CRISP REFRESH (debounced, genuinely fresh decode) ------
+     Crops the SVG's own viewBox down to exactly the visible region and sets
+     width/height to the actual destination pixel size, forcing the browser
+     to decode a brand-new raster at exactly that resolution — bounded by
+     screen size, not the whole map, regardless of zoom level.
+  ----------------------------------------------------------------------- */
+  function scheduleCrispRefresh(immediate){
+    clearTimeout(refreshTimer);
+    const delay = immediate ? 0 : 160;
+    refreshTimer = setTimeout(doCrispRefresh, delay);
+  }
+
+  function doCrispRefresh(){
+    if(!rawSvgText) return;
+    const { srcX, srcY, srcW, srcH, vw, vh } = currentViewRect();
+    const destW = Math.max(1, Math.round(vw * dpr));
+    const destH = Math.max(1, Math.round(vh * dpr));
+
+    const cropped = rawSvgText.replace(/<svg\b([^>]*)>/, (m, attrs) => {
+      const cleaned = attrs
+        .replace(/\swidth="[^"]*"/, '')
+        .replace(/\sheight="[^"]*"/, '')
+        .replace(/\sviewBox="[^"]*"/, '');
+      return `<svg${cleaned} viewBox="${srcX} ${srcY} ${srcW} ${srcH}" width="${destW}" height="${destH}">`;
+    });
+
+    const blob = new Blob([cropped], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const off = document.createElement('canvas');
+      off.width = destW; off.height = destH;
+      const octx = off.getContext('2d');
+      octx.drawImage(img, 0, 0, destW, destH);
+      URL.revokeObjectURL(url);
+
+      lastCrisp = { canvas: off, srcX, srcY, srcW, srcH };
+      // Only draw it if the view hasn't moved on since this refresh was requested
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.drawImage(off, 0, 0, vw, vh);
+      statusEl.textContent = `${Math.round(scale * 100) / 100}x`;
+      loadingEl.classList.add('hidden');
+    };
+    img.onerror = () => {
+      console.error('Crisp refresh failed to decode SVG crop');
+    };
+    img.src = url;
   }
 
   fetch('map.svg')
@@ -82,22 +159,14 @@
       return r.text();
     })
     .then(svgText => {
-      stage.innerHTML = svgText;
-      const svgEl = stage.querySelector('svg');
-      if(svgEl){
-        const vb = svgEl.getAttribute('viewBox');
-        if(vb){
-          const parts = vb.split(/\s+/).map(Number);
-          svgW = parts[2]; svgH = parts[3];
-        }
-        // let our own transform control scale, not the SVG's own width/height
-        svgEl.removeAttribute('width');
-        svgEl.removeAttribute('height');
-        svgEl.style.width = svgW + 'px';
-        svgEl.style.height = svgH + 'px';
+      const vbMatch = svgText.match(/viewBox="([^"]+)"/);
+      if(vbMatch){
+        const parts = vbMatch[1].trim().split(/\s+/).map(Number);
+        mapW = parts[2]; mapH = parts[3];
       }
+      rawSvgText = svgText;
+      resizeCanvas();
       fitToScreen();
-      loadingEl.classList.add('hidden');
     })
     .catch(err => {
       loadingEl.textContent = 'Failed to load map.svg — ' + err.message;
@@ -111,22 +180,23 @@
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
-    // point under the cursor in map-space before zoom
-    const mapX = (mx - tx) / scale;
-    const mapY = (my - ty) / scale;
+    const mapX = originX + mx / scale;
+    const mapY = originY + my / scale;
 
     const zoomFactor = Math.pow(1.0015, -e.deltaY);
     let newScale = scale * zoomFactor;
-    newScale = Math.max(0.05, Math.min(newScale, 40));
+    newScale = Math.max(0.05, Math.min(newScale, 60));
 
-    tx = mx - mapX * newScale;
-    ty = my - mapY * newScale;
+    originX = mapX - mx / newScale;
+    originY = mapY - my / newScale;
     scale = newScale;
-    applyTransform();
+
+    cheapDraw();
+    scheduleCrispRefresh(false);
   }, { passive:false });
 
   /* ---------------- PAN (drag) ---------------- */
-  let dragging = false, lastX = 0, lastY = 0;
+  let lastX = 0, lastY = 0;
   viewport.addEventListener('pointerdown', (e) => {
     dragging = true;
     viewport.classList.add('dragging');
@@ -134,17 +204,17 @@
   });
   window.addEventListener('pointermove', (e) => {
     if(!dragging) return;
-    tx += e.clientX - lastX;
-    ty += e.clientY - lastY;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
     lastX = e.clientX; lastY = e.clientY;
-    applyTransform();
+    originX -= dx / scale;
+    originY -= dy / scale;
+    cheapDraw();
   });
   window.addEventListener('pointerup', () => {
-    dragging = false;
-    viewport.classList.remove('dragging');
+    if(dragging){ dragging = false; viewport.classList.remove('dragging'); scheduleCrispRefresh(false); }
   });
 
-  window.addEventListener('resize', fitToScreen);
+  window.addEventListener('resize', () => { resizeCanvas(); fitToScreen(); });
   window.addEventListener('dblclick', fitToScreen);
 </script>
 </body>
