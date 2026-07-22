@@ -4,9 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Map Viewer Test</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
 <style>
   *{ margin:0; padding:0; box-sizing:border-box; }
-  html, body{ width:100%; height:100%; overflow:hidden; background:#141414; font-family:sans-serif; }
+  html, body{ width:100%; height:100%; overflow:hidden; background:#ffffff; font-family:sans-serif; }
+
+  .nav-mark{
+    position:fixed; z-index:15;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    color:#0A0A0A;
+    font-size:30px;
+    line-height:1;
+    text-decoration:none;
+    background:none;
+    border:none;
+    cursor:pointer;
+    user-select:none;
+    padding:4px;
+    opacity:0.9;
+    transition:opacity .2s ease;
+  }
+  .nav-mark:hover{ opacity:1; }
+  #nav-home{ top:20px; left:24px; }
+  #nav-map{ bottom:20px; right:24px; cursor:default; } /* already on the map page — present for visual consistency, not a link */
 
   #map-viewport{ position:fixed; inset:0; cursor:grab; }
   #map-viewport.dragging{ cursor:grabbing; }
@@ -14,22 +35,22 @@
 
   .hint{
     position:fixed; bottom:20px; left:20px; z-index:5;
-    color:rgba(255,255,255,0.55);
+    color:rgba(10,10,10,0.55);
     font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
     font-family:monospace;
   }
   .status{
     position:fixed; bottom:20px; right:20px; z-index:5;
-    color:rgba(255,255,255,0.4);
+    color:rgba(10,10,10,0.4);
     font-size:11px; letter-spacing:0.05em;
     font-family:monospace;
   }
   .loading{
     position:fixed; inset:0; z-index:10;
     display:flex; align-items:center; justify-content:center;
-    color:rgba(255,255,255,0.6);
+    color:rgba(10,10,10,0.6);
     font-family:monospace; font-size:13px; letter-spacing:0.08em;
-    background:#141414;
+    background:#ffffff;
     transition:opacity .3s ease;
   }
   .loading.hidden{ opacity:0; pointer-events:none; }
@@ -40,6 +61,8 @@
 <div id="map-viewport">
   <canvas id="map-canvas"></canvas>
 </div>
+<a class="nav-mark" id="nav-home" href="../index.html">N</a>
+<span class="nav-mark" id="nav-map">M</span>
 <div class="hint">Scroll to zoom &middot; drag to pan &middot; double-click to reset</div>
 <div class="status" id="status"></div>
 <div class="loading" id="loading">Loading map&hellip;</div>
@@ -88,7 +111,7 @@
   function cheapDraw(){
     const { srcX, srcY, srcW, srcH, vw, vh } = currentViewRect();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = '#141414';
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, vw, vh);
     if(!lastCrisp) return;
 

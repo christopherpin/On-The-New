@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "static-site",
+      "runtimeExecutable": "powershell.exe",
+      "runtimeArgs": [
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", "C:\\Users\\cmp\\AppData\\Local\\Temp\\claude\\C--Users-cmp-On-The-New\\45dab9cc-9c62-46b8-abce-5ffddfbe3fe4\\scratchpad\\static-server.ps1",
+        "-Port", "8080",
+        "-Root", "C:\\Users\\cmp\\On-The-New"
+      ],
+      "port": 8080
+    }
+  ]
+}
