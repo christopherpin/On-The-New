@@ -4,16 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>On The New</title>
-<script>
-  // Deep-link entry (?isolate=N, from the map page's "click the floating
-  // object" shortcut): hide the whole page synchronously, before ANY CSS/
-  // layout/paint happens, so there is no possible flash of the landing
-  // splash or the full grid while the main script sets up the isolated
-  // state. Revealed again at the end of that setup, further down.
-  if(/[?&]isolate=/.test(location.search)){
-    document.documentElement.style.visibility = 'hidden';
-  }
-</script>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -1476,26 +1466,6 @@
 
   onResize();
   requestAnimationFrame(animate);
-
-  // Deep-link entry point: ?isolate=N jumps straight into the isolated view
-  // for cells[N] — used by the map page's "click the floating object"
-  // shortcut to a linked grid artifact. The other 224 cells are hidden
-  // BEFORE isolate() ever runs (not faded out by it) so this never shows
-  // the full busy grid first — the linked artifact just appears floating
-  // where it already sits, then grows and centers exactly like a normal
-  // click, without the grid ever having been visible.
-  (function(){
-    const params = new URLSearchParams(window.location.search);
-    const isolateIdx = parseInt(params.get('isolate'), 10);
-    if(!isNaN(isolateIdx) && cells[isolateIdx]){
-      landing.classList.add('hidden');
-      cells.forEach(c => {
-        if(c !== cells[isolateIdx]){ c.mesh.visible = false; c.materials.forEach(m => m.opacity = 0); }
-      });
-      isolate(cells[isolateIdx]);
-    }
-    document.documentElement.style.visibility = 'visible'; // undo the head-script guard, whether or not isolate ran
-  })();
 </script>
 </body>
 </html>

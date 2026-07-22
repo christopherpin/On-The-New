@@ -163,7 +163,7 @@
   }
   #isolate-object.show{ opacity:1; pointer-events:auto; }
   #isolate-object:active{ cursor:grabbing; }
-  #isolate-object canvas{ display:block; width:100%; height:170px; cursor:pointer; }
+  #isolate-object canvas{ display:block; width:100%; height:170px; }
 
   /* ---------------- INVERTED SCHEME (right-click) — background flips
      white<->black and the map's plain-black street lines flip to white;
@@ -524,9 +524,8 @@
      clicking any window on its facade. The object itself stays still (a
      fixed tilt so flat faces don't read as flat-on) while the camera
      slowly orbits around it — a small turntable preview, not an
-     interactive viewer (no user-driven orbit controls). Clicking the
-     object itself (not the panel chrome) jumps to the grid page with this
-     building's linked artifact already isolated. ---------------- */
+     interactive viewer (no user-driven orbit controls, and clicking the
+     object itself does nothing — draggable only). ---------------- */
   const placeholderGeoms = [
     new THREE.BoxGeometry(1.5, 1.5, 1.5),
     new THREE.IcosahedronGeometry(1.05, 0),
@@ -583,14 +582,8 @@
     objAnimRunning = false;
   }
   document.getElementById('object-close').addEventListener('click', hideObjectPanel);
-  makeDraggable(isolateObjectEl, {
-    ignoreSelector: '.enlarged-close',
-    onClick: (target) => {
-      if(target.id === 'object-canvas' && selectedBuilding){
-        window.location.href = `../index.html?isolate=${selectedBuilding.gridCellIndex}`;
-      }
-    }
-  });
+  // Clicking the object itself intentionally does nothing — draggable only.
+  makeDraggable(isolateObjectEl, { ignoreSelector: '.enlarged-close' });
 
   function updateIsolateInfo(){
     const isSelected = !!selectedBuilding;
@@ -708,11 +701,10 @@
         },
         // Arbitrary link into the grid's 225 artifacts — there's no real
         // data model connecting a map footprint to a specific grid cell
-        // yet, so this just picks one to make "view this on the grid"
-        // possible at all. Fixed per building (not re-rolled on reselect).
-        // The floating object's shape is looked up from this via
-        // GRID_SHAPE_INDEXES, not its own independent random pick, so it
-        // actually matches whatever the grid cell really shows.
+        // yet, so this just picks one, fixed per building (not re-rolled
+        // on reselect). Used only to look up a matching shape via
+        // GRID_SHAPE_INDEXES below, so the floating object's shape at
+        // least agrees with what that grid cell really shows.
         gridCellIndex: Math.floor(Math.random() * 225)
       };
     });
