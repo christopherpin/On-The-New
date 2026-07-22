@@ -442,6 +442,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/SSAOShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SSAOPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
 <script>
   /* ---------------- TITLE FADE-IN ---------------- */
@@ -565,6 +571,24 @@
   gridCamera.position.z = 1000;
 
   const inspectCamera = new THREE.PerspectiveCamera(45, viewW/viewH, 0.1, 3000);
+
+  // SSAO for the isolate/orbit view only (grid stays plain — 225 objects
+  // isn't where this matters, and it keeps this contained). Wrapped so a
+  // CDN/version hiccup falls back to normal rendering rather than breaking
+  // the page.
+  let ssaoComposer = null;
+  try {
+    ssaoComposer = new THREE.EffectComposer(renderer);
+    ssaoComposer.addPass(new THREE.RenderPass(scene, inspectCamera));
+    const ssaoPass = new THREE.SSAOPass(scene, inspectCamera, viewW, viewH);
+    ssaoPass.kernelRadius = 12;   // tuned for our object scale (roughly tens of world units, not meters)
+    ssaoPass.minDistance = 0.0005;
+    ssaoPass.maxDistance = 0.15;
+    ssaoPass.output = THREE.SSAOPass.OUTPUT.Default;
+    ssaoComposer.addPass(ssaoPass);
+  } catch(err) {
+    ssaoComposer = null;
+  }
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.55));
   const key = new THREE.DirectionalLight(0xffffff, 0.9);
@@ -1241,6 +1265,7 @@
     inspectCamera.updateProjectionMatrix();
 
     renderer.setSize(viewW, viewH);
+    if(ssaoComposer) ssaoComposer.setSize(viewW, viewH);
     if(mode === 'grid'){
       buildGrid();
       applyColorScheme();
@@ -1275,7 +1300,8 @@
 
     if(mode === 'isolated'){
       if(orbitControls) orbitControls.update();
-      renderer.render(scene, inspectCamera);
+      if(ssaoComposer) ssaoComposer.render();
+      else renderer.render(scene, inspectCamera);
     } else {
       renderer.render(scene, gridCamera);
     }
