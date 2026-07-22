@@ -36,6 +36,14 @@
     font-size:clamp(48px, 9vw, 116px);
     letter-spacing:-0.01em;
     color:var(--black);
+    opacity:0;
+  }
+  .landing-title.title-fade-in{
+    animation: titleFadeIn 1.8s ease forwards;
+  }
+  @keyframes titleFadeIn{
+    from{ opacity:0; }
+    to{ opacity:1; }
   }
 
   .word-trigger{
@@ -82,20 +90,25 @@
     font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
     transition:opacity .3s ease;
   }
-  .return-hint{
-    position:fixed; top:22px; left:26px; z-index:11;
-    color:rgba(245,197,24,0.75);
-    font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
-    opacity:0; pointer-events:none;
-    transition:opacity .3s ease;
+
+
+  #leader-svg{
+    position:fixed; inset:0; z-index:11;
+    width:100%; height:100%;
+    pointer-events:none;
   }
-  .return-hint.show{ opacity:1; }
+  .leader-line{
+    stroke: rgba(10,10,10,0.5);
+    stroke-width:1;
+    stroke-dasharray:3 4;
+  }
+  body.color-inverted .leader-line{ stroke: rgba(245,197,24,0.65); }
 
   .nav-mark{
     position:fixed; z-index:15;
     font-family:'Space Grotesk', sans-serif;
     font-weight:700;
-    color:#FFFFFF;
+    color:#0A0A0A;
     font-size:30px;
     line-height:1;
     text-decoration:none;
@@ -105,26 +118,325 @@
     user-select:none;
     padding:4px;
     opacity:0.9;
-    transition:opacity .2s ease;
+    transition:opacity .2s ease, color .2s ease;
   }
+  body.color-inverted .nav-mark{ color:#F5C518; }
   .nav-mark:hover{ opacity:1; }
   #nav-home{ top:20px; left:24px; }
   #nav-map{ bottom:20px; right:24px; }
+
+  /* ---------------- ISOLATE INFO: photo grid + address ---------------- */
+  #isolate-photos{
+    position:fixed; z-index:12;
+    top:50%; right:5%;
+    transform:translateY(-50%);
+    display:grid;
+    grid-template-columns: repeat(3, 72px);
+    grid-auto-rows: 72px;
+    gap:8px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .4s ease;
+    cursor:grab;
+    touch-action:none;
+  }
+  #isolate-photos.show{ opacity:1; pointer-events:auto; }
+  #isolate-photos:active{ cursor:grabbing; }
+  .photo-tile{
+    border:1.5px dashed rgba(10,10,10,0.55);
+    background:rgba(10,10,10,0.06);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; letter-spacing:0.08em; text-transform:uppercase;
+    color:rgba(10,10,10,0.55);
+    user-select:none;
+  }
+  body.color-inverted .photo-tile{
+    border-color: rgba(245,197,24,0.6);
+    background: rgba(245,197,24,0.1);
+    color: rgba(245,197,24,0.75);
+  }
+
+  #isolate-address{
+    position:fixed; z-index:12;
+    bottom:8%; left:50%;
+    transform:translateX(-50%);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px; letter-spacing:0.06em;
+    color:rgba(10,10,10,0.75);
+    text-align:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .4s ease;
+  }
+  #isolate-address.show{ opacity:1; }
+  #isolate-address .addr-label{
+    font-size:9.5px; opacity:0.6; display:block; margin-bottom:3px;
+  }
+  body.color-inverted #isolate-address{ color: rgba(245,197,24,0.85); }
+
+  #isolate-blockmap{
+    position:fixed; z-index:12;
+    bottom:20px; right:70px;
+    width:300px;
+    padding:0;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease;
+    cursor:grab;
+    touch-action:none;
+    color:rgba(10,10,10,0.8);
+  }
+  #isolate-blockmap svg{
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.28));
+  }
+  #isolate-blockmap.show{ opacity:1; pointer-events:auto; }
+  #isolate-blockmap:active{ cursor:grabbing; }
+  #isolate-blockmap svg{ display:block; width:100%; height:auto; }
+  .blockmap-label{
+    margin-top:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:9.5px; letter-spacing:0.06em; text-transform:uppercase;
+    text-align:center; opacity:0.7;
+  }
+  body.color-inverted #isolate-blockmap{
+    color: rgba(245,197,24,0.85);
+  }
+
+  #isolate-facade{
+    position:fixed; z-index:12;
+    top:6%; left:50%;
+    transform:translateX(-50%);
+    width:150px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease;
+    cursor:grab;
+    touch-action:none;
+    color:rgba(10,10,10,0.8);
+  }
+  #isolate-facade.show{ opacity:1; pointer-events:auto; }
+  #isolate-facade:active{ cursor:grabbing; }
+  #isolate-facade svg{
+    display:block; width:100%; height:auto;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.28));
+  }
+  body.color-inverted #isolate-facade{ color: rgba(245,197,24,0.85); }
+
+  .enlarged-photo{
+    position:fixed; z-index:14;
+    width:230px; height:230px;
+    border:1.5px solid rgba(10,10,10,0.65);
+    background:rgba(245,241,231,0.96);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px; letter-spacing:0.06em; text-transform:uppercase;
+    color:rgba(10,10,10,0.6);
+    cursor:grab;
+    touch-action:none;
+    user-select:none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  }
+  .enlarged-photo:active{ cursor:grabbing; }
+  body.color-inverted .enlarged-photo{
+    background: rgba(10,10,10,0.96);
+    border-color: rgba(245,197,24,0.6);
+    color: rgba(245,197,24,0.8);
+  }
+  .enlarged-close{
+    all:unset;
+    position:absolute; top:6px; right:9px;
+    cursor:pointer;
+    font-size:20px; line-height:1;
+    color:inherit;
+    padding:4px;
+    opacity:0.7;
+  }
+  .enlarged-close:hover{ opacity:1; }
+
+  @media (max-width:900px){
+    #isolate-photos{
+      grid-template-columns: repeat(3, 56px);
+      grid-auto-rows: 56px;
+      top:auto; bottom:16%; right:50%; transform:translateX(50%);
+    }
+  }
 </style>
 </head>
 <body>
 
 <div id="landing">
-  <h1 class="landing-title">On The<br><button class="word-trigger" id="enter-word">New</button></h1>
+  <h1 class="landing-title" id="landing-title-el">On The<br><button class="word-trigger" id="enter-word">New</button></h1>
 </div>
 
 <div id="grid-stage">
   <canvas id="grid-canvas"></canvas>
+  <svg id="leader-svg"></svg>
   <button class="nav-mark" id="nav-home">N</button>
   <a class="nav-mark" id="nav-map" href="map-test/index.html">M</a>
   <div class="hint" id="hint">Scroll or drag to explore &middot; 225 facade details, Washington Heights (placeholder)</div>
   <div class="counter" id="counter">15 &times; 15 grid</div>
-  <div class="return-hint" id="return-hint">Esc &middot; click background to return</div>
+
+  <div id="isolate-photos">
+    <div class="photo-tile">1</div>
+    <div class="photo-tile">2</div>
+    <div class="photo-tile">3</div>
+    <div class="photo-tile">4</div>
+    <div class="photo-tile">5</div>
+    <div class="photo-tile">6</div>
+    <div class="photo-tile">7</div>
+    <div class="photo-tile">8</div>
+    <div class="photo-tile">9</div>
+  </div>
+  <div id="isolate-address">
+    <span class="addr-label">Location (placeholder)</span>
+    123 Placeholder St, Washington Heights, NY
+  </div>
+
+  <div id="isolate-blockmap">
+    <svg viewBox="15 15 360 285" xmlns="http://www.w3.org/2000/svg">
+      <!-- street centerlines -->
+      <line x1="100" y1="90"  x2="300" y2="90"  stroke="currentColor" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.5"/>
+      <line x1="100" y1="230" x2="300" y2="230" stroke="currentColor" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.5"/>
+      <line x1="90"  y1="100" x2="90"  y2="220" stroke="currentColor" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.5"/>
+      <line x1="310" y1="100" x2="310" y2="220" stroke="currentColor" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.5"/>
+
+      <!-- street edges -->
+      <line x1="100" y1="80"  x2="300" y2="80"  stroke="currentColor" stroke-width="1" opacity="0.55"/>
+      <line x1="100" y1="240" x2="300" y2="240" stroke="currentColor" stroke-width="1" opacity="0.55"/>
+      <line x1="80"  y1="100" x2="80"  y2="220" stroke="currentColor" stroke-width="1" opacity="0.55"/>
+      <line x1="320" y1="100" x2="320" y2="220" stroke="currentColor" stroke-width="1" opacity="0.55"/>
+
+      <!-- top half-block: partial row, adjacent block -->
+      <g opacity="0.38">
+        <rect x="100" y="35" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="120" y="35" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="140" y="35" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="160" y="35" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="180" y="35" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="200" y="35" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="220" y="35" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="240" y="35" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="260" y="35" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="280" y="35" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+      </g>
+
+      <!-- bottom half-block -->
+      <g opacity="0.38">
+        <rect x="100" y="240" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="120" y="240" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="140" y="240" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="160" y="240" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="180" y="240" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="200" y="240" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="220" y="240" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="240" y="240" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="260" y="240" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="280" y="240" width="20" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+      </g>
+
+      <!-- left half-block -->
+      <g opacity="0.38">
+        <rect x="35" y="100" width="45" height="30" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="35" y="130" width="45" height="30" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="35" y="160" width="45" height="30" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="35" y="190" width="45" height="30" fill="none" stroke="currentColor" stroke-width="0.8"/>
+      </g>
+
+      <!-- right half-block -->
+      <g opacity="0.38">
+        <rect x="320" y="100" width="45" height="30" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="320" y="130" width="45" height="30" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="320" y="160" width="45" height="30" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="320" y="190" width="45" height="30" fill="none" stroke="currentColor" stroke-width="0.8"/>
+      </g>
+
+      <!-- diagonal corner fragments: same NYC-proportioned lots as the rest of the diagram -->
+      <g opacity="0.32">
+        <!-- top-left -->
+        <rect x="35" y="35" width="22" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="57" y="35" width="23" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <!-- top-right -->
+        <rect x="320" y="35" width="22" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="342" y="35" width="23" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <!-- bottom-left -->
+        <rect x="35" y="240" width="22" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="57" y="240" width="23" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <!-- bottom-right -->
+        <rect x="320" y="240" width="22" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+        <rect x="342" y="240" width="23" height="45" fill="none" stroke="currentColor" stroke-width="0.8"/>
+      </g>
+
+      <!-- central block: top row (10 narrow, deep NYC-proportioned lots) -->
+      <rect x="100" y="100" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="120" y="100" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="140" y="100" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="160" y="100" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect id="blockmap-building" x="180" y="100" width="20" height="45" fill="currentColor" fill-opacity="0.24" stroke="currentColor" stroke-width="1.8" style="cursor:pointer;"/>
+      <rect x="200" y="100" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="220" y="100" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="240" y="100" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="260" y="100" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="280" y="100" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+
+      <!-- central block: bottom row -->
+      <rect x="100" y="175" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="120" y="175" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="140" y="175" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="160" y="175" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="180" y="175" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="200" y="175" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="220" y="175" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="240" y="175" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="260" y="175" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="280" y="175" width="20" height="45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+
+      <!-- central block: left side infill (short cross-street frontage) -->
+      <rect x="100" y="145" width="45" height="15" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="100" y="160" width="45" height="15" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+
+      <!-- central block: right side infill -->
+      <rect x="255" y="145" width="45" height="15" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+      <rect x="255" y="160" width="45" height="15" fill="none" stroke="currentColor" stroke-width="1" opacity="0.85"/>
+    </svg>
+  </div>
+
+  <div id="isolate-facade">
+    <svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+      <!-- ground -->
+      <line x1="10" y1="240" x2="190" y2="240" stroke="currentColor" stroke-width="1" opacity="0.6"/>
+      <!-- building outline -->
+      <rect x="30" y="30" width="140" height="210" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.85"/>
+      <!-- cornice -->
+      <rect x="26" y="22" width="148" height="12" fill="none" stroke="currentColor" stroke-width="1" opacity="0.7"/>
+      <path d="M50 34 L60 46 L70 34 Z" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.6"/>
+      <path d="M95 34 L105 46 L115 34 Z" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.6"/>
+      <path d="M130 34 L140 46 L150 34 Z" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.6"/>
+      <!-- floor divider lines -->
+      <line x1="30" y1="80"  x2="170" y2="80"  stroke="currentColor" stroke-width="0.6" opacity="0.4"/>
+      <line x1="30" y1="120" x2="170" y2="120" stroke="currentColor" stroke-width="0.6" opacity="0.4"/>
+      <line x1="30" y1="160" x2="170" y2="160" stroke="currentColor" stroke-width="0.6" opacity="0.4"/>
+      <!-- floor 1 (top) windows -->
+      <rect x="48" y="46" width="24" height="26" fill="none" stroke="currentColor" stroke-width="1"/>
+      <rect x="88" y="46" width="24" height="26" fill="none" stroke="currentColor" stroke-width="1"/>
+      <rect x="128" y="46" width="24" height="26" fill="none" stroke="currentColor" stroke-width="1"/>
+      <!-- floor 2 -->
+      <rect x="48" y="86" width="24" height="26" fill="none" stroke="currentColor" stroke-width="1"/>
+      <rect x="88" y="86" width="24" height="26" fill="none" stroke="currentColor" stroke-width="1"/>
+      <rect x="128" y="86" width="24" height="26" fill="none" stroke="currentColor" stroke-width="1"/>
+      <!-- floor 3 -->
+      <rect x="48" y="126" width="24" height="26" fill="none" stroke="currentColor" stroke-width="1"/>
+      <rect x="88" y="126" width="24" height="26" fill="none" stroke="currentColor" stroke-width="1"/>
+      <rect x="128" y="126" width="24" height="26" fill="none" stroke="currentColor" stroke-width="1"/>
+      <!-- ground / parlor floor: arched windows + door -->
+      <path d="M46 210 L46 168 A14 14 0 0 1 74 168 L74 210 Z" fill="none" stroke="currentColor" stroke-width="1.1"/>
+      <path d="M126 210 L126 168 A14 14 0 0 1 154 168 L154 210 Z" fill="none" stroke="currentColor" stroke-width="1.1"/>
+      <rect x="88" y="180" width="24" height="60" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <path d="M88 180 L100 168 L112 180" fill="none" stroke="currentColor" stroke-width="1"/>
+      <!-- stoop -->
+      <path d="M84 240 L116 240 L110 220 L90 220 Z" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.7"/>
+    </svg>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -132,6 +444,14 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
 <script>
+  /* ---------------- TITLE FADE-IN ---------------- */
+  function playTitleIntro(){
+    const titleEl = document.getElementById('landing-title-el');
+    titleEl.classList.remove('title-fade-in');
+    void titleEl.offsetWidth; // force reflow so the animation can restart
+    titleEl.classList.add('title-fade-in');
+  }
+
   /* ---------------- LANDING DISMISS + INVERT ---------------- */
   const landing = document.getElementById('landing');
   document.getElementById('enter-word').addEventListener('click', () => {
@@ -143,8 +463,15 @@
   });
 
   document.getElementById('nav-home').addEventListener('click', () => {
-    landing.classList.remove('hidden');
+    if(mode === 'isolated'){
+      returnToGrid();
+    } else {
+      landing.classList.remove('hidden');
+      playTitleIntro();
+    }
   });
+
+  playTitleIntro();
 
   /* ---------------- IDLE: return to landing after 60s of inactivity ---------------- */
   let idleTimer = null;
@@ -153,6 +480,7 @@
     if(landing.classList.contains('hidden')){
       idleTimer = setTimeout(() => {
         landing.classList.remove('hidden');
+        playTitleIntro();
       }, 60000);
     }
   }
@@ -194,27 +522,23 @@
     });
   }
 
-  /* ---------------- REAL MODEL TEST SLOT -------------------------------
-     One uploaded, centered/normalized OBJ model dropped into the center
-     cell to test the load path. Needs to sit in a /models folder next
-     to index.html in the repo for the relative path below to work.
+  /* ---------------- REAL MODEL: replaces the cube placeholder ------------
+     Every cell that would have shown the box/cube geometry (shapeIndex 0)
+     now loads this uploaded model instead. Needs to sit in a /models
+     folder next to index.html in the repo for the relative path to work.
   ----------------------------------------------------------------------*/
-  {
-    const testIdx = 7 * GRID_COLS + 7; // center cell
-    gridData[testIdx] = {
-      kind: 'model',
-      url: 'models/frommaya_03_centered.obj',
-      rotSeed: new THREE.Vector3(0,0,0),
-      spin: 0.06
-    };
-  }
+  gridData.forEach(entry => {
+    if(entry.shapeIndex === 0){
+      entry.kind = 'model';
+      entry.url = 'models/grid_test_1_centered.obj';
+    }
+  });
 
   /* ---------------- RENDERER / SCENES ---------------- */
   const canvas = document.getElementById('grid-canvas');
   const stage = document.getElementById('grid-stage');
   const hintEl = document.getElementById('hint');
   const counterEl = document.getElementById('counter');
-  const returnHintEl = document.getElementById('return-hint');
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -231,6 +555,7 @@
   function applyColorScheme(){
     scene.background.set(colorsInverted ? COLOR_INVERTED_BG : COLOR_NORMAL_BG);
     cells.forEach(c => c.materials.forEach(m => m.color.set(colorsInverted ? COLOR_INVERTED_OBJ : COLOR_NORMAL_OBJ)));
+    document.body.classList.toggle('color-inverted', colorsInverted);
   }
 
   let viewW = window.innerWidth;
@@ -275,9 +600,7 @@
     objLoader.load(url, (obj) => {
       modelCache[url] = obj;
       onReady(obj.clone());
-    }, undefined, (err) => {
-      console.error('Model failed to load:', url, err);
-    });
+    }, undefined, () => {});
   }
 
   function loadCell(entry, cellRef){
@@ -304,13 +627,6 @@
           }
         });
 
-        if(newMats.length === 0){
-          console.error(
-            'Model file loaded but contained no usable mesh geometry:', entry.url,
-            '— top-level children found:', obj.children.length,
-            '— types:', obj.children.map(c => c.type)
-          );
-        }
         cellRef.materials = newMats;
       });
 
@@ -484,6 +800,282 @@
     stage.classList.remove('dragging');
   });
 
+  /* ---------------- LEADER LINES: always connect draggable panels back to
+     the isolated object. Since OrbitControls always keeps its target
+     centered in frame, the object's screen position is simply the
+     viewport center — no 3D-to-2D projection needed. ---------------- */
+  const leaderSvg = document.getElementById('leader-svg');
+  const leaderMap = new Map(); // DOM element -> its <line>
+
+  let isolatedObjectRadius = 60; // approx on-screen pixel radius of the isolated object, set precisely in enterInspectMode
+
+  function registerLeader(el){
+    if(leaderMap.has(el)) return;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('class', 'leader-line');
+    leaderSvg.appendChild(line);
+    leaderMap.set(el, line);
+    updateLeaderFor(el);
+  }
+  function unregisterLeader(el){
+    const line = leaderMap.get(el);
+    if(line){ line.remove(); leaderMap.delete(el); }
+  }
+  function updateLeaderFor(el){
+    const line = leaderMap.get(el);
+    if(!line) return;
+
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2; // object center — always screen center while isolated
+    const rect = el.getBoundingClientRect();
+    const px = rect.left + rect.width / 2, py = rect.top + rect.height / 2; // panel center
+
+    const dx = px - cx, dy = py - cy;
+    const dist = Math.hypot(dx, dy) || 1;
+    const ux = dx / dist, uy = dy / dist; // unit direction: object -> panel
+
+    // Near end: stop at the edge of the object's approximate footprint,
+    // so the line never draws on top of it.
+    const startX = cx + ux * isolatedObjectRadius;
+    const startY = cy + uy * isolatedObjectRadius;
+
+    // Far end: stop at the edge of the panel's bounding box (ray from the
+    // panel's center back toward the object), not its exact centroid.
+    const hw = rect.width / 2, hh = rect.height / 2;
+    const bx = -ux, by = -uy;
+    const tX = bx !== 0 ? hw / Math.abs(bx) : Infinity;
+    const tY = by !== 0 ? hh / Math.abs(by) : Infinity;
+    const t = Math.min(tX, tY);
+    const endX = px + bx * t;
+    const endY = py + by * t;
+
+    line.setAttribute('x1', startX);
+    line.setAttribute('y1', startY);
+    line.setAttribute('x2', endX);
+    line.setAttribute('y2', endY);
+  }
+  function updateAllLeaders(){
+    leaderMap.forEach((line, el) => updateLeaderFor(el));
+  }
+  window.addEventListener('resize', updateAllLeaders);
+
+  const isolatePhotosEl = document.getElementById('isolate-photos');
+  const isolateAddressEl = document.getElementById('isolate-address');
+
+  /* Generic drag-anywhere-on-element helper. Distinguishes a click (small
+     total movement) from a real drag so panels can both be repositioned
+     and still respond to clicks on their contents (e.g. a photo tile). */
+  function makeDraggable(el, opts = {}){
+    let dragging = false, startX = 0, startY = 0, origLeft = 0, origTop = 0, moved = 0, downTarget = null;
+
+    el.addEventListener('pointerdown', (e) => {
+      if(opts.ignoreSelector && e.target.closest(opts.ignoreSelector)) return;
+      e.stopPropagation();
+      dragging = true; moved = 0; downTarget = e.target;
+      el.setPointerCapture(e.pointerId);
+      const rect = el.getBoundingClientRect();
+      origLeft = rect.left; origTop = rect.top;
+      startX = e.clientX; startY = e.clientY;
+      el.style.left = origLeft + 'px';
+      el.style.top = origTop + 'px';
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+      el.style.transform = 'none';
+    });
+    el.addEventListener('pointermove', (e) => {
+      if(!dragging) return;
+      e.stopPropagation();
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      moved = Math.max(moved, Math.hypot(dx, dy));
+      el.style.left = (origLeft + dx) + 'px';
+      el.style.top = (origTop + dy) + 'px';
+      updateLeaderFor(el);
+    });
+    el.addEventListener('pointerup', (e) => {
+      if(!dragging) return;
+      dragging = false;
+      e.stopPropagation();
+      if(moved < 6 && opts.onClick) opts.onClick(downTarget, e);
+
+      if(moved >= 6 && opts.onOffscreenReset){
+        const r = el.getBoundingClientRect();
+        const offscreen = r.right < 0 || r.left > window.innerWidth || r.bottom < 0 || r.top > window.innerHeight;
+        if(offscreen){
+          opts.onOffscreenReset();
+          updateLeaderFor(el);
+        }
+      }
+    });
+  }
+
+  function spawnEnlargedPhoto(label, x, y){
+    const card = document.createElement('div');
+    card.className = 'enlarged-photo';
+    card.style.left = x + 'px';
+    card.style.top = y + 'px';
+    card.innerHTML = `<button class="enlarged-close">&times;</button><span>Photo ${label}</span>`;
+    document.getElementById('grid-stage').appendChild(card);
+    makeDraggable(card, {
+      ignoreSelector: '.enlarged-close',
+      onOffscreenReset: () => { unregisterLeader(card); card.remove(); }
+    });
+    registerLeader(card);
+    card.querySelector('.enlarged-close').addEventListener('click', (e) => {
+      e.stopPropagation();
+      unregisterLeader(card);
+      card.remove();
+    });
+  }
+
+  makeDraggable(isolatePhotosEl, {
+    onClick: (target) => {
+      const tile = target.closest('.photo-tile');
+      if(!tile) return;
+      const rect = tile.getBoundingClientRect();
+      spawnEnlargedPhoto(tile.textContent.trim(), rect.left - 20, rect.top - 20);
+    },
+    onOffscreenReset: () => snapPhotosHome()
+  });
+
+  let isolatePhotosHome = null;
+
+  function resetIsolatePanelPosition(){
+    // Clears back to the CSS stylesheet default — used only when freshly
+    // entering isolation, before we know the "home" position to snap back to.
+    isolatePhotosEl.style.left = '';
+    isolatePhotosEl.style.top = '';
+    isolatePhotosEl.style.right = '';
+    isolatePhotosEl.style.transform = '';
+  }
+
+  function snapPhotosHome(){
+    if(!isolatePhotosHome){ resetIsolatePanelPosition(); return; }
+    isolatePhotosEl.style.left = isolatePhotosHome.left + 'px';
+    isolatePhotosEl.style.top = isolatePhotosHome.top + 'px';
+    isolatePhotosEl.style.right = 'auto';
+    isolatePhotosEl.style.transform = 'none';
+  }
+
+  const blockMapEl = document.getElementById('isolate-blockmap');
+  makeDraggable(blockMapEl, {
+    onOffscreenReset: () => {
+      blockMapEl.classList.remove('show');
+      unregisterLeader(blockMapEl);
+    }
+  });
+
+  function resetBlockMapPosition(){
+    blockMapEl.style.left = 'auto';
+    blockMapEl.style.right = '70px';
+    blockMapEl.style.top = 'auto';
+    blockMapEl.style.bottom = '20px';
+    blockMapEl.style.transform = 'none';
+  }
+
+  function toggleBlockMap(){
+    const opening = !blockMapEl.classList.contains('show');
+    if(opening){
+      resetBlockMapPosition();
+      blockMapEl.classList.add('show');
+      registerLeader(blockMapEl);
+    } else {
+      blockMapEl.classList.remove('show');
+      unregisterLeader(blockMapEl);
+    }
+  }
+
+  const facadeEl = document.getElementById('isolate-facade');
+  makeDraggable(facadeEl, {
+    onOffscreenReset: () => {
+      facadeEl.classList.remove('show');
+      unregisterLeader(facadeEl);
+    }
+  });
+
+  function resetFacadePosition(){
+    facadeEl.style.left = '50%';
+    facadeEl.style.top = '6%';
+    facadeEl.style.right = 'auto';
+    facadeEl.style.bottom = 'auto';
+    facadeEl.style.transform = 'translateX(-50%)';
+  }
+
+  function toggleFacade(){
+    const opening = !facadeEl.classList.contains('show');
+    if(opening){
+      resetFacadePosition();
+      facadeEl.classList.add('show');
+      registerLeader(facadeEl);
+    } else {
+      facadeEl.classList.remove('show');
+      unregisterLeader(facadeEl);
+    }
+  }
+
+  // Double-click the isolated object to open the facade/elevation. Detected
+  // manually (two pointerdowns close in time+position) rather than relying
+  // on the native dblclick event, since OrbitControls' own low-level pointer
+  // handling on this same canvas can interfere with that synthesis.
+  let lastObjClickTime = 0, lastObjClickX = 0, lastObjClickY = 0;
+  stage.addEventListener('pointerdown', (e) => {
+    if(mode !== 'isolated') return;
+    if(e.target.closest('.nav-mark, #isolate-photos, #isolate-address, #isolate-blockmap, #isolate-facade, .enlarged-photo')) return;
+    const now = performance.now();
+    const isDouble = (now - lastObjClickTime < 350) && Math.hypot(e.clientX - lastObjClickX, e.clientY - lastObjClickY) < 12;
+    lastObjClickTime = isDouble ? 0 : now;
+    lastObjClickX = e.clientX; lastObjClickY = e.clientY;
+    if(isDouble){
+      setNdc(e);
+      raycaster.setFromCamera(ndc, inspectCamera);
+      const hits = raycaster.intersectObject(selected.mesh);
+      if(hits.length) toggleFacade();
+    }
+  }, true); // capture phase: see the event before OrbitControls does
+
+  // Same manual approach for the highlighted building in the site plan.
+  let lastBldgClickTime = 0;
+  document.getElementById('blockmap-building').addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    const now = performance.now();
+    if(now - lastBldgClickTime < 350){
+      toggleFacade();
+      lastBldgClickTime = 0;
+    } else {
+      lastBldgClickTime = now;
+    }
+  });
+
+  // M behaves differently depending on context: normal grid browsing still
+  // sends you to the full map page, but from inside an isolated object it
+  // pops up the block-plan card instead. Its href is removed entirely while
+  // isolated (see enterInspectMode/returnToGrid), so navigation is disabled
+  // at the source, not just intercepted here.
+  const navMapEl = document.getElementById('nav-map');
+  navMapEl.addEventListener('click', (e) => {
+    if(mode === 'isolated'){
+      e.preventDefault();
+      toggleBlockMap();
+    }
+  });
+
+  function showIsolateInfo(){
+    resetIsolatePanelPosition();
+    isolatePhotosEl.classList.add('show');
+    isolateAddressEl.classList.add('show');
+    registerLeader(isolatePhotosEl);
+    const r = isolatePhotosEl.getBoundingClientRect();
+    isolatePhotosHome = { left: r.left, top: r.top };
+  }
+  function hideIsolateInfo(){
+    isolatePhotosEl.classList.remove('show');
+    isolateAddressEl.classList.remove('show');
+    blockMapEl.classList.remove('show');
+    facadeEl.classList.remove('show');
+    unregisterLeader(isolatePhotosEl);
+    unregisterLeader(blockMapEl);
+    unregisterLeader(facadeEl);
+    document.querySelectorAll('.enlarged-photo').forEach(el => { unregisterLeader(el); el.remove(); });
+  }
+
   /* ---------------- ISOLATE / ORBIT TRANSITION ---------------- */
   const GROW_FACTOR = 4.6; // roughly double the previous grow amount
 
@@ -534,6 +1126,10 @@
     const fovRad = THREE.MathUtils.degToRad(inspectCamera.fov);
     const matchDistance = viewH / (2 * Math.tan(fovRad / 2));
 
+    // Since 1 world unit = 1 screen pixel at matchDistance (see below), and
+    // orbit has no zoom, this stays valid for the whole isolated session.
+    isolatedObjectRadius = grownScale * 1.3;
+
     // Phase 1: position the perspective camera exactly like the orthographic
     // grid camera was — centered on world origin, facing straight down -Z.
     // At this pose the object stays in the exact screen position it was in
@@ -541,6 +1137,7 @@
     inspectCamera.position.set(0, 0, matchDistance);
     inspectCamera.quaternion.identity();
     mode = 'isolated'; // render loop now uses inspectCamera
+    navMapEl.removeAttribute('href'); // M can no longer navigate away while isolated
 
     // Phase 2: glide the camera from that pose to one centered on + looking
     // at the object, so it settles into frame instead of snapping there.
@@ -569,10 +1166,10 @@
         orbitControls.target.copy(cell.mesh.position);
         orbitControls.enableDamping = true;
         orbitControls.dampingFactor = 0.08;
-        orbitControls.minDistance = matchDistance * 0.12;
-        orbitControls.maxDistance = matchDistance * 3;
+        orbitControls.enableZoom = false; // orbit only for now
+        orbitControls.enablePan = false;
         orbitControls.update();
-        returnHintEl.classList.add('show');
+        showIsolateInfo();
       }
     }
     settle();
@@ -581,7 +1178,7 @@
   function returnToGrid(){
     if(mode !== 'isolated') return;
     if(orbitControls){ orbitControls.dispose(); orbitControls = null; }
-    returnHintEl.classList.remove('show');
+    hideIsolateInfo();
     mode = 'transition';
     cells.forEach(c => { if(c !== selected) c.mesh.visible = true; });
 
@@ -605,6 +1202,7 @@
       } else {
         selected = null;
         mode = 'grid';
+        navMapEl.setAttribute('href', 'map-test/index.html');
         hintEl.style.opacity = 1;
         counterEl.style.opacity = 1;
       }
@@ -612,20 +1210,8 @@
     tween();
   }
 
-  window.addEventListener('keydown', (e) => {
-    if(e.key === 'Escape') returnToGrid();
-  });
-  // click on the exposed black background (nothing hit) while isolated -> return
-  stage.addEventListener('pointerup', (e) => {
-    if(e.target.closest('.nav-mark')) return;
-    if(mode !== 'isolated') return;
-    const dist = Math.hypot(e.clientX - downX, e.clientY - downY);
-    if(dist >= 6) return;
-    setNdc(e);
-    raycaster.setFromCamera(ndc, inspectCamera);
-    const hits = raycaster.intersectObject(selected.mesh);
-    if(!hits.length) returnToGrid();
-  });
+  // N (top-left) is now the only way back to the grid from isolation —
+  // clicking the object or the background no longer returns you there.
 
   /* ---------------- RESIZE ---------------- */
   function onResize(){
