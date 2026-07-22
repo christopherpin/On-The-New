@@ -163,7 +163,36 @@
   }
   #isolate-object.show{ opacity:1; pointer-events:auto; }
   #isolate-object:active{ cursor:grabbing; }
-  #isolate-object canvas{ display:block; width:100%; height:170px; }
+  #isolate-object canvas{ display:block; width:100%; height:170px; cursor:pointer; }
+
+  /* ---------------- INVERTED SCHEME (right-click) — background flips
+     white<->black and the map's plain-black street lines flip to white;
+     grey/pink/red/yellow/blue linework is untouched (handled in JS on the
+     raw SVG text and via the fade-wash color). Floating UI chrome flips
+     black<->white to match. ---------------- */
+  body.map-inverted{ background:#0A0A0A; }
+  body.map-inverted .loading{ background:#0A0A0A; color:rgba(255,255,255,0.6); }
+  body.map-inverted .hint{ color:rgba(255,255,255,0.55); }
+  body.map-inverted .status{ color:rgba(255,255,255,0.4); }
+  body.map-inverted .nav-mark{ color:#FFFFFF; }
+  body.map-inverted .leader-line{ stroke: rgba(255,255,255,0.45); }
+  body.map-inverted #isolate-facade{ color: rgba(255,255,255,0.85); }
+  body.map-inverted #isolate-facade .facade-window:hover{ fill:rgba(255,255,255,0.12); }
+  body.map-inverted .photo-tile{
+    border-color: rgba(255,255,255,0.45);
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.6);
+  }
+  body.map-inverted #isolate-address{ color: rgba(255,255,255,0.8); }
+  body.map-inverted .enlarged-photo{
+    background: rgba(10,10,10,0.98);
+    border-color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.6);
+  }
+  body.map-inverted #isolate-object{
+    background: rgba(10,10,10,0.98);
+    border-color: rgba(255,255,255,0.5);
+  }
 </style>
 </head>
 <body>
@@ -225,6 +254,40 @@
     '603 W 183rd Street'
   ];
 
+  // Identical to the grid page's own shapeIndex generator — same seed, same
+  // algorithm — so a building's linked gridCellIndex maps to the SAME shape
+  // the grid actually assigns that cell, instead of an unrelated
+  // independently-random one. (Only the shape needs this correlation;
+  // photos/address/facade are still fine varying freely per artifact.)
+  function mulberry32(seed){
+    return function(){
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  const GRID_SHAPE_SEED = 1337;
+  const GRID_COLS_FOR_SHAPES = 15, GRID_CELL_COUNT_FOR_SHAPES = 225;
+  function computeGridShapeIndexes(){
+    const rng = mulberry32(GRID_SHAPE_SEED);
+    const out = [];
+    for(let i=0; i<GRID_CELL_COUNT_FOR_SHAPES; i++){
+      const col = i % GRID_COLS_FOR_SHAPES;
+      const row = Math.floor(i / GRID_COLS_FOR_SHAPES);
+      const forbidden = new Set();
+      if(col > 0) forbidden.add(out[i-1]);
+      if(row > 0) forbidden.add(out[i-GRID_COLS_FOR_SHAPES]);
+      if(col > 0 && row > 0) forbidden.add(out[i-GRID_COLS_FOR_SHAPES-1]);
+      if(col < GRID_COLS_FOR_SHAPES-1 && row > 0) forbidden.add(out[i-GRID_COLS_FOR_SHAPES+1]);
+      let choices = [0,1,2,3,4].filter(s => !forbidden.has(s));
+      if(choices.length === 0) choices = [0,1,2,3,4];
+      out.push(choices[Math.floor(rng() * choices.length)]);
+    }
+    return out;
+  }
+  const GRID_SHAPE_INDEXES = computeGridShapeIndexes();
+
   const isolateFacadeEl = document.getElementById('isolate-facade');
   const facadeSvgEl = document.getElementById('facade-svg');
   const isolateObjectEl = document.getElementById('isolate-object');
@@ -278,18 +341,39 @@
     entry.line.setAttribute('x2', endX);
     entry.line.setAttribute('y2', endY);
   }
-  function updateAllLeaders(){ leaderMap.forEach((_, el) => updateLeaderFor(el)); }
+  // Live duplicate of the selected building's own hatch markup, transformed
+  // to sit exactly on top of where the canvas draws that same shape. Kept
+  // as leader-svg's last child (paints on top of the <line>s), so the
+  // leader lines appear to flow into the hatch and terminate behind it,
+  // instead of drawing visibly over it.
+  const buildingOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  function updateBuildingOverlay(){
+    if(!selectedBuilding){ buildingOverlay.innerHTML = ''; return; }
+    const rect = viewport.getBoundingClientRect();
+    const tx = rect.left - originX * scale, ty = rect.top - originY * scale;
+    buildingOverlay.setAttribute('transform', `translate(${tx} ${ty}) scale(${scale})`);
+    if(buildingOverlay.dataset.forId !== String(selectedBuilding.id)){
+      buildingOverlay.innerHTML = selectedBuilding.markup;
+      buildingOverlay.dataset.forId = String(selectedBuilding.id);
+    }
+    leaderSvg.appendChild(buildingOverlay); // re-append: always stay the topmost child
+  }
+
+  function updateAllLeaders(){
+    leaderMap.forEach((_, el) => updateLeaderFor(el));
+    updateBuildingOverlay();
+  }
   window.addEventListener('resize', updateAllLeaders);
 
-  // Anchor point for the building footprint's own leaders: bottom-center of
-  // its current on-screen bounding box, so lines read as coming from
-  // underneath the footprint rather than through its middle.
+  // Anchor point for the building footprint's own leaders: the centroid of
+  // its current on-screen bounding box (the buildingOverlay above then
+  // visually covers the segment of line between the edge and this point).
   function buildingScreenAnchor(building){
     if(!building) return null;
     const rect = viewport.getBoundingClientRect();
     const x = rect.left + (building.bbox.x + building.bbox.w/2 - originX) * scale;
-    const yBottom = rect.top + (building.bbox.y + building.bbox.h - originY) * scale;
-    return { x, y: yBottom };
+    const y = rect.top + (building.bbox.y + building.bbox.h/2 - originY) * scale;
+    return { x, y };
   }
 
   /* Generic drag-anywhere-on-element helper — ported from the grid page.
@@ -327,6 +411,12 @@
       dragActive = false;
       e.stopPropagation();
       if(moved < 6 && opts.onClick) opts.onClick(downTarget, e);
+
+      if(moved >= 6 && opts.onOffscreenReset){
+        const r = el.getBoundingClientRect();
+        const offscreen = r.right < 0 || r.left > window.innerWidth || r.bottom < 0 || r.top > window.innerHeight;
+        if(offscreen) opts.onOffscreenReset();
+      }
     });
   }
 
@@ -352,18 +442,31 @@
     isolateObjectEl.style.transform = 'none';
   }
 
+  function spawnEnlargedPhoto(label, x, y){
+    const card = document.createElement('div');
+    card.className = 'enlarged-photo';
+    card.style.left = x + 'px';
+    card.style.top = y + 'px';
+    card.innerHTML = `<button class="enlarged-close">&times;</button><span>Photo ${label}</span>`;
+    document.body.appendChild(card);
+    makeDraggable(card, {
+      ignoreSelector: '.enlarged-close',
+      onOffscreenReset: () => { unregisterLeader(card); card.remove(); }
+    });
+    registerLeader(card, () => buildingScreenAnchor(selectedBuilding));
+    card.querySelector('.enlarged-close').addEventListener('click', (e) => {
+      e.stopPropagation();
+      unregisterLeader(card);
+      card.remove();
+    });
+  }
+
   makeDraggable(isolatePhotosEl, {
     onClick: (target) => {
       const tile = target.closest('.photo-tile');
       if(!tile) return;
-      const card = document.createElement('div');
-      card.className = 'enlarged-photo';
       const rect = tile.getBoundingClientRect();
-      card.style.left = (rect.left - 60) + 'px';
-      card.style.top = (rect.top - 30) + 'px';
-      card.innerHTML = `<button class="enlarged-close">&times;</button><span>Photo ${tile.textContent.trim()}</span>`;
-      document.body.appendChild(card);
-      card.querySelector('.enlarged-close').addEventListener('click', () => card.remove());
+      spawnEnlargedPhoto(tile.textContent.trim(), rect.left - 60, rect.top - 30);
     }
   });
 
@@ -418,9 +521,12 @@
   });
 
   /* ---------------- PLACEHOLDER 3D OBJECT — one per building, summoned by
-     clicking any window on its facade. Plain rotating placeholder geometry,
-     same shape set as the grid page, no orbit controls (this is a small
-     fixed preview, not an interactive viewer). ---------------- */
+     clicking any window on its facade. The object itself stays still (a
+     fixed tilt so flat faces don't read as flat-on) while the camera
+     slowly orbits around it — a small turntable preview, not an
+     interactive viewer (no user-driven orbit controls). Clicking the
+     object itself (not the panel chrome) jumps to the grid page with this
+     building's linked artifact already isolated. ---------------- */
   const placeholderGeoms = [
     new THREE.BoxGeometry(1.5, 1.5, 1.5),
     new THREE.IcosahedronGeometry(1.05, 0),
@@ -428,7 +534,8 @@
     new THREE.ConeGeometry(0.95, 1.5, 24),
     new THREE.SphereGeometry(1.0, 24, 18)
   ];
-  let objRenderer = null, objScene = null, objCamera = null, objMesh = null, objAnimRunning = false;
+  let objRenderer = null, objScene = null, objCamera = null, objMesh = null, objAnimRunning = false, objOrbitAngle = 0;
+  const OBJ_ORBIT_RADIUS = 4.2, OBJ_ORBIT_HEIGHT = 1.0, OBJ_ORBIT_SPEED = 0.0018; // ~35s per revolution
 
   function ensureObjectRenderer(){
     if(objRenderer) return;
@@ -438,7 +545,6 @@
     objRenderer.setSize(170, 170, false);
     objScene = new THREE.Scene();
     objCamera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-    objCamera.position.set(0, 0, 4.2);
     objScene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const key = new THREE.DirectionalLight(0xffffff, 0.9);
     key.position.set(2, 3, 4);
@@ -448,15 +554,18 @@
   function animateObject(){
     if(!objAnimRunning) return;
     requestAnimationFrame(animateObject);
-    if(objMesh){ objMesh.rotation.x += 0.006; objMesh.rotation.y += 0.01; }
+    objOrbitAngle += OBJ_ORBIT_SPEED;
+    objCamera.position.set(Math.sin(objOrbitAngle) * OBJ_ORBIT_RADIUS, OBJ_ORBIT_HEIGHT, Math.cos(objOrbitAngle) * OBJ_ORBIT_RADIUS);
+    objCamera.lookAt(0, 0, 0);
     objRenderer.render(objScene, objCamera);
   }
 
   function showObjectPanel(windowEl){
     ensureObjectRenderer();
     if(objMesh){ objScene.remove(objMesh); objMesh.geometry.dispose(); objMesh.material.dispose(); }
-    const mat = new THREE.MeshStandardMaterial({ color:0x0A0A0A, roughness:0.55, metalness:0.08 });
-    objMesh = new THREE.Mesh(placeholderGeoms[selectedBuilding.shapeIndex], mat);
+    const mat = new THREE.MeshStandardMaterial({ color: mapInverted ? 0xFFFFFF : 0x0A0A0A, roughness:0.55, metalness:0.08 });
+    objMesh = new THREE.Mesh(placeholderGeoms[GRID_SHAPE_INDEXES[selectedBuilding.gridCellIndex]], mat);
+    objMesh.rotation.set(0.35, 0.6, 0); // fixed tilt so the orbiting camera reads the shape's volume, not a flat face
     objScene.add(objMesh);
 
     resetObjectPosition();
@@ -474,7 +583,14 @@
     objAnimRunning = false;
   }
   document.getElementById('object-close').addEventListener('click', hideObjectPanel);
-  makeDraggable(isolateObjectEl, { ignoreSelector: '.enlarged-close' });
+  makeDraggable(isolateObjectEl, {
+    ignoreSelector: '.enlarged-close',
+    onClick: (target) => {
+      if(target.id === 'object-canvas' && selectedBuilding){
+        window.location.href = `../index.html?isolate=${selectedBuilding.gridCellIndex}`;
+      }
+    }
+  });
 
   function updateIsolateInfo(){
     const isSelected = !!selectedBuilding;
@@ -496,8 +612,9 @@
       isolateFacadeEl.classList.remove('show');
       unregisterLeader(isolateFacadeEl);
       hideObjectPanel();
-      document.querySelectorAll('.enlarged-photo').forEach(el => el.remove());
+      document.querySelectorAll('.enlarged-photo').forEach(el => { unregisterLeader(el); el.remove(); });
     }
+    updateBuildingOverlay();
   }
 
   let dpr = Math.min(window.devicePixelRatio || 1, 3);
@@ -514,6 +631,10 @@
   let lastCrisp = null; // { canvas, srcX, srcY, srcW, srcH }
   let refreshTimer = null;
   let dragging = false;
+
+  // Right-click invert: background white<->black, plain-black street
+  // lines <-> white; grey/pink/red/yellow/blue linework is left alone.
+  let mapInverted = false;
 
   /* ---------------- SELECTABLE PINK BUILDINGS -------------------------
      The only actually-filled shapes in the map (everything else is
@@ -585,7 +706,14 @@
           bays: 2 + Math.floor(Math.random() * 3),
           groundArched: Math.random() < 0.5
         },
-        shapeIndex: Math.floor(Math.random() * 5)
+        // Arbitrary link into the grid's 225 artifacts — there's no real
+        // data model connecting a map footprint to a specific grid cell
+        // yet, so this just picks one to make "view this on the grid"
+        // possible at all. Fixed per building (not re-rolled on reselect).
+        // The floating object's shape is looked up from this via
+        // GRID_SHAPE_INDEXES, not its own independent random pick, so it
+        // actually matches whatever the grid cell really shows.
+        gridCellIndex: Math.floor(Math.random() * 225)
       };
     });
   }
@@ -623,7 +751,7 @@
   function cheapDraw(){
     const { srcX, srcY, srcW, srcH, vw, vh } = currentViewRect();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = mapInverted ? '#0A0A0A' : '#ffffff';
     ctx.fillRect(0, 0, vw, vh);
     if(!lastCrisp) return;
 
@@ -681,13 +809,18 @@
     const destW = Math.max(1, Math.round(vw * dpr));
     const destH = Math.max(1, Math.round(vh * dpr));
 
-    const cropped = rawSvgText.replace(/<svg\b([^>]*)>/, (m, attrs) => {
+    let cropped = rawSvgText.replace(/<svg\b([^>]*)>/, (m, attrs) => {
       const cleaned = attrs
         .replace(/\swidth="[^"]*"/, '')
         .replace(/\sheight="[^"]*"/, '')
         .replace(/\sviewBox="[^"]*"/, '');
       return `<svg${cleaned} viewBox="${srcX} ${srcY} ${srcW} ${srcH}" width="${destW}" height="${destH}">`;
     });
+    if(mapInverted){
+      // Only the plain-black street/building lines flip to white — grey,
+      // pink, red, yellow, and blue linework is left exactly as authored.
+      cropped = cropped.replace(/stroke="#000000"/g, 'stroke="#FFFFFF"').replace(/stroke="Black"/g, 'stroke="#FFFFFF"');
+    }
 
     try{
       const baseImg = await loadSvgAsImage(cropped);
@@ -698,10 +831,11 @@
       octx.drawImage(baseImg, 0, 0, destW, destH);
 
       if(selectedBuilding){
-        // Fade everything to near-white, then redraw just the selected
-        // building's own paths (same crop/scale) on top at full color —
-        // it reads as "isolated" against the faded rest of the map.
-        octx.fillStyle = 'rgba(255,255,255,0.88)';
+        // Fade everything to near-white (or near-black, if inverted), then
+        // redraw just the selected building's own paths (same crop/scale)
+        // on top at full color — it reads as "isolated" against the faded
+        // rest of the map.
+        octx.fillStyle = mapInverted ? 'rgba(10,10,10,0.88)' : 'rgba(255,255,255,0.88)';
         octx.fillRect(0, 0, destW, destH);
         const hlSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${srcX} ${srcY} ${srcW} ${srcH}" width="${destW}" height="${destH}">${selectedBuilding.markup}</svg>`;
         const hlImg = await loadSvgAsImage(hlSvg);
@@ -741,6 +875,16 @@
       loadingEl.textContent = 'Failed to load map.svg — ' + err.message;
       console.error('Map load failed:', err);
     });
+
+  /* ---------------- RIGHT-CLICK: INVERT COLOR SCHEME ---------------- */
+  viewport.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    mapInverted = !mapInverted;
+    document.body.classList.toggle('map-inverted', mapInverted);
+    if(objMesh) objMesh.material.color.set(mapInverted ? 0xFFFFFF : 0x0A0A0A);
+    lastCrisp = null;
+    scheduleCrispRefresh(true);
+  });
 
   /* ---------------- ZOOM (wheel, zoom-to-cursor) ---------------- */
   viewport.addEventListener('wheel', (e) => {
