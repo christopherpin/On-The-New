@@ -588,7 +588,8 @@
     return new THREE.MeshStandardMaterial({
       color: colorsInverted ? COLOR_INVERTED_OBJ : COLOR_NORMAL_OBJ,
       roughness: 0.55, metalness: 0.08,
-      transparent: true, opacity: 1, depthWrite: false
+      transparent: true, opacity: 1, depthWrite: false,
+      side: THREE.DoubleSide
     });
   }
 
@@ -597,6 +598,20 @@
 
   function fetchModelObject(url, onReady){
     if(modelCache[url]){ onReady(modelCache[url].clone()); return; }
+
+    // If the raw OBJ text is embedded inline on the page (used for previewing
+    // in this chat, where a real fetch() to a separate file isn't possible),
+    // parse it directly instead of fetching. Falls through to a normal fetch
+    // otherwise, so the real deployed site is unaffected by this.
+    const inlineId = 'model-data-' + url.replace(/[^a-zA-Z0-9]/g, '_');
+    const inlineEl = document.getElementById(inlineId);
+    if(inlineEl){
+      const obj = objLoader.parse(inlineEl.textContent);
+      modelCache[url] = obj;
+      onReady(obj.clone());
+      return;
+    }
+
     objLoader.load(url, (obj) => {
       modelCache[url] = obj;
       onReady(obj.clone());
