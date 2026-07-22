@@ -182,9 +182,6 @@
     transition:opacity .4s ease;
   }
   #isolate-address.show{ opacity:1; }
-  #isolate-address .addr-label{
-    font-size:9.5px; opacity:0.6; display:block; margin-bottom:3px;
-  }
   body.color-inverted #isolate-address{ color: rgba(245,197,24,0.85); }
 
   #isolate-blockmap{
@@ -297,8 +294,8 @@
   <canvas id="grid-canvas"></canvas>
   <svg id="leader-svg"></svg>
   <a class="nav-mark" id="nav-map" href="map-test/index.html">M</a>
-  <div class="hint" id="hint">Scroll or drag to explore &middot; 225 facade details, Washington Heights (placeholder)</div>
-  <div class="counter" id="counter">15 &times; 15 grid</div>
+  <div class="hint" id="hint">Scroll or drag to explore</div>
+  <div class="counter" id="counter"></div>
 
   <div id="isolate-photos">
     <div class="photo-tile">1</div>
@@ -312,8 +309,7 @@
     <div class="photo-tile">9</div>
   </div>
   <div id="isolate-address">
-    <span class="addr-label">Location (placeholder)</span>
-    123 Placeholder St, Washington Heights, NY
+    <span id="isolate-address-text"></span>
   </div>
 
   <div id="isolate-blockmap">
@@ -505,6 +501,20 @@
   // identical) floating site map, picked from the site plan's real lots.
   const BLOCK_LOT_COUNT = document.querySelectorAll('#isolate-blockmap .blockmap-lot').length;
 
+  // Real Washington Heights addresses, cycled across artifacts — only 8
+  // exist so they repeat across the 225 cells, but every artifact reads a
+  // real address instead of the same placeholder string.
+  const ADDRESSES = [
+    '719 W 181st Street',
+    '800 W 180th Street',
+    '770 W 181st Street',
+    '49-55 Pinehurst Ave',
+    '812 W 181st Street',
+    '154 Wadsworth Ave',
+    '106 Pinehurst Ave',
+    '603 W 183rd Street'
+  ];
+
   const gridData = [];
   for(let i=0; i<CELL_COUNT; i++){
     const col = i % GRID_COLS;
@@ -525,6 +535,7 @@
       rotSeed: new THREE.Vector3(Math.random(), Math.random(), Math.random()).multiplyScalar(Math.PI*2),
       spin: 0.05 + Math.random() * 0.16,
       blockLotIndex: Math.floor(Math.random() * BLOCK_LOT_COUNT),
+      address: ADDRESSES[Math.floor(Math.random() * ADDRESSES.length)],
       facade: {
         floors: 2 + Math.floor(Math.random() * 3),   // 2-4 upper stories
         bays: 2 + Math.floor(Math.random() * 3),      // 2-4 window columns per story
@@ -909,6 +920,7 @@
 
   const isolatePhotosEl = document.getElementById('isolate-photos');
   const isolateAddressEl = document.getElementById('isolate-address');
+  const isolateAddressTextEl = document.getElementById('isolate-address-text');
 
   /* Generic drag-anywhere-on-element helper. Distinguishes a click (small
      total movement) from a real drag so panels can both be repositioned
@@ -988,12 +1000,26 @@
   let isolatePhotosHome = null;
 
   function resetIsolatePanelPosition(){
-    // Clears back to the CSS stylesheet default — used only when freshly
-    // entering isolation, before we know the "home" position to snap back to.
-    isolatePhotosEl.style.left = '';
-    isolatePhotosEl.style.top = '';
-    isolatePhotosEl.style.right = '';
-    isolatePhotosEl.style.transform = '';
+    if(window.innerWidth <= 900){
+      // mobile default (bottom-center) is handled entirely by its own CSS rule
+      isolatePhotosEl.style.left = '';
+      isolatePhotosEl.style.top = '';
+      isolatePhotosEl.style.right = '';
+      isolatePhotosEl.style.transform = '';
+      return;
+    }
+    // Centers the photo grid in the vertical gap between the isolated
+    // object's bottom edge and the address panel's top edge, rather than a
+    // fixed percentage — so it never overlaps the object regardless of the
+    // object's on-screen size (isolatedObjectRadius).
+    const objBottom = window.innerHeight/2 + isolatedObjectRadius;
+    const addressTop = isolateAddressEl.getBoundingClientRect().top;
+    const photosHeight = isolatePhotosEl.getBoundingClientRect().height;
+    const midY = (objBottom + addressTop) / 2;
+    isolatePhotosEl.style.left = '50%';
+    isolatePhotosEl.style.top = (midY - photosHeight/2) + 'px';
+    isolatePhotosEl.style.right = 'auto';
+    isolatePhotosEl.style.transform = 'translateX(-50%)';
   }
 
   function snapPhotosHome(){
@@ -1087,8 +1113,6 @@
     out += flankWindow(126, p.groundArched);
     out += `<rect x="88" y="180" width="24" height="60" fill="none" stroke="currentColor" stroke-width="1.2"/>`;
     out += `<line x1="88" y1="180" x2="112" y2="180" stroke="currentColor" stroke-width="1"/>`;
-
-    out += `<path d="M84 240 L116 240 L110 220 L90 220 Z" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.7"/>`;
 
     return out;
   }
@@ -1218,6 +1242,7 @@
     selected = cell;
     applyBlockMapHighlight(cell.entry.blockLotIndex);
     applyFacadeVariant(cell.entry.facade);
+    isolateAddressTextEl.textContent = cell.entry.address;
     cell.hovered = false;
     cell.wasHovered = false;
     cell.jitter.set(0,0,0);

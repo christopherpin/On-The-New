@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Map Viewer Test</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *{ margin:0; padding:0; box-sizing:border-box; }
   html, body{ width:100%; height:100%; overflow:hidden; background:#ffffff; font-family:sans-serif; }
@@ -54,6 +54,116 @@
     transition:opacity .3s ease;
   }
   .loading.hidden{ opacity:0; pointer-events:none; }
+
+  /* ---------------- ISOLATE INFO: photo grid + address (shown when a
+     building footprint is selected) — same visual language as the
+     isolated-artifact page's panels, adapted to this page's light theme. */
+  #isolate-photos{
+    position:fixed; z-index:12;
+    top:50%; right:5%;
+    transform:translateY(-50%);
+    display:grid;
+    grid-template-columns: repeat(3, 64px);
+    grid-auto-rows: 64px;
+    gap:8px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .4s ease;
+  }
+  #isolate-photos.show{ opacity:1; pointer-events:auto; }
+  .photo-tile{
+    border:1.5px dashed rgba(10,10,10,0.45);
+    background:rgba(10,10,10,0.05);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px; letter-spacing:0.08em; text-transform:uppercase;
+    color:rgba(10,10,10,0.55);
+    user-select:none;
+    cursor:pointer;
+  }
+  #isolate-address{
+    position:fixed; z-index:12;
+    bottom:8%; left:50%;
+    transform:translateX(-50%);
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px; letter-spacing:0.06em;
+    color:rgba(10,10,10,0.75);
+    text-align:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .4s ease;
+  }
+  #isolate-address.show{ opacity:1; }
+
+  .enlarged-photo{
+    position:fixed; z-index:14;
+    width:210px; height:210px;
+    border:1.5px solid rgba(10,10,10,0.5);
+    background:rgba(255,255,255,0.98);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px; letter-spacing:0.06em; text-transform:uppercase;
+    color:rgba(10,10,10,0.55);
+    box-shadow:0 8px 24px rgba(0,0,0,0.18);
+  }
+  .enlarged-close{
+    all:unset;
+    position:absolute; top:6px; right:9px;
+    cursor:pointer;
+    font-size:18px; line-height:1;
+    color:inherit;
+    padding:4px;
+    opacity:0.6;
+  }
+  .enlarged-close:hover{ opacity:1; }
+
+  #leader-svg{
+    position:fixed; inset:0; z-index:11;
+    width:100%; height:100%;
+    pointer-events:none;
+  }
+  .leader-line{
+    stroke: rgba(10,10,10,0.45);
+    stroke-width:1;
+    stroke-dasharray:3 4;
+  }
+
+  #isolate-facade{
+    position:fixed; z-index:12;
+    top:10%; left:8%;
+    width:200px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease;
+    cursor:grab;
+    touch-action:none;
+    color:rgba(10,10,10,0.8);
+  }
+  #isolate-facade.show{ opacity:1; pointer-events:auto; }
+  #isolate-facade:active{ cursor:grabbing; }
+  #isolate-facade svg{
+    display:block; width:100%; height:auto;
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.16));
+  }
+  #isolate-facade .facade-window{ cursor:pointer; pointer-events:fill; }
+  #isolate-facade .facade-window:hover{ fill:rgba(10,10,10,0.08); }
+
+  #isolate-object{
+    position:fixed; z-index:13;
+    width:190px;
+    padding:10px;
+    border:1.5px solid rgba(10,10,10,0.5);
+    background:rgba(255,255,255,0.98);
+    box-shadow:0 8px 24px rgba(0,0,0,0.18);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease;
+    cursor:grab;
+    touch-action:none;
+  }
+  #isolate-object.show{ opacity:1; pointer-events:auto; }
+  #isolate-object:active{ cursor:grabbing; }
+  #isolate-object canvas{ display:block; width:100%; height:170px; }
 </style>
 </head>
 <body>
@@ -61,18 +171,334 @@
 <div id="map-viewport">
   <canvas id="map-canvas"></canvas>
 </div>
+<svg id="leader-svg"></svg>
 <a class="nav-mark" id="nav-home" href="../index.html">N</a>
 <span class="nav-mark" id="nav-map">M</span>
-<div class="hint">Scroll to zoom &middot; drag to pan &middot; double-click to reset</div>
+<div class="hint">Scroll to zoom &middot; drag to pan</div>
 <div class="status" id="status"></div>
 <div class="loading" id="loading">Loading map&hellip;</div>
 
+<div id="isolate-photos">
+  <div class="photo-tile">1</div>
+  <div class="photo-tile">2</div>
+  <div class="photo-tile">3</div>
+  <div class="photo-tile">4</div>
+  <div class="photo-tile">5</div>
+  <div class="photo-tile">6</div>
+  <div class="photo-tile">7</div>
+  <div class="photo-tile">8</div>
+  <div class="photo-tile">9</div>
+</div>
+<div id="isolate-address">
+  <span id="isolate-address-text"></span>
+</div>
+<div id="isolate-facade">
+  <svg id="facade-svg" viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+<div id="isolate-object">
+  <button class="enlarged-close" id="object-close">&times;</button>
+  <canvas id="object-canvas"></canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
   const viewport = document.getElementById('map-viewport');
   const canvas = document.getElementById('map-canvas');
   const ctx = canvas.getContext('2d');
   const loadingEl = document.getElementById('loading');
   const statusEl = document.getElementById('status');
+  const isolatePhotosEl = document.getElementById('isolate-photos');
+  const isolateAddressEl = document.getElementById('isolate-address');
+  const isolateAddressTextEl = document.getElementById('isolate-address-text');
+
+  // Same address pool as the isolated-artifact page — only 8 real addresses,
+  // so they repeat across buildings, but each selectable footprint reads a
+  // real street address instead of a placeholder.
+  const ADDRESSES = [
+    '719 W 181st Street',
+    '800 W 180th Street',
+    '770 W 181st Street',
+    '49-55 Pinehurst Ave',
+    '812 W 181st Street',
+    '154 Wadsworth Ave',
+    '106 Pinehurst Ave',
+    '603 W 183rd Street'
+  ];
+
+  const isolateFacadeEl = document.getElementById('isolate-facade');
+  const facadeSvgEl = document.getElementById('facade-svg');
+  const isolateObjectEl = document.getElementById('isolate-object');
+
+  /* ---------------- LEADER LINES: connect draggable panels back to the
+     selected building footprint. Unlike the grid page (where the isolated
+     object is always screen-center), a map footprint can be anywhere on
+     screen depending on pan/zoom, so each leader's anchor is computed live
+     from the building's current on-screen position. ---------------- */
+  const leaderSvg = document.getElementById('leader-svg');
+  const leaderMap = new Map(); // el -> { line, getAnchor }
+
+  function registerLeader(el, getAnchor){
+    const existing = leaderMap.get(el);
+    if(existing){ existing.getAnchor = getAnchor; updateLeaderFor(el); return; }
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('class', 'leader-line');
+    leaderSvg.appendChild(line);
+    leaderMap.set(el, { line, getAnchor });
+    updateLeaderFor(el);
+  }
+  function unregisterLeader(el){
+    const entry = leaderMap.get(el);
+    if(entry){ entry.line.remove(); leaderMap.delete(el); }
+  }
+  function updateLeaderFor(el){
+    const entry = leaderMap.get(el);
+    if(!entry) return;
+    const anchor = entry.getAnchor();
+    if(!anchor){ entry.line.setAttribute('x1',0); entry.line.setAttribute('y1',0); entry.line.setAttribute('x2',0); entry.line.setAttribute('y2',0); return; }
+
+    const cx = anchor.x, cy = anchor.y;
+    const rect = el.getBoundingClientRect();
+    const px = rect.left + rect.width/2, py = rect.top + rect.height/2;
+
+    const dx = px - cx, dy = py - cy;
+    const dist = Math.hypot(dx, dy) || 1;
+    const ux = dx/dist, uy = dy/dist;
+
+    // Far end: clipped to the edge of the panel's bounding box, same as the
+    // grid page's leaders.
+    const hw = rect.width/2, hh = rect.height/2;
+    const bx = -ux, by = -uy;
+    const tX = bx !== 0 ? hw/Math.abs(bx) : Infinity;
+    const tY = by !== 0 ? hh/Math.abs(by) : Infinity;
+    const t = Math.min(tX, tY);
+    const endX = px + bx*t, endY = py + by*t;
+
+    entry.line.setAttribute('x1', cx);
+    entry.line.setAttribute('y1', cy);
+    entry.line.setAttribute('x2', endX);
+    entry.line.setAttribute('y2', endY);
+  }
+  function updateAllLeaders(){ leaderMap.forEach((_, el) => updateLeaderFor(el)); }
+  window.addEventListener('resize', updateAllLeaders);
+
+  // Anchor point for the building footprint's own leaders: bottom-center of
+  // its current on-screen bounding box, so lines read as coming from
+  // underneath the footprint rather than through its middle.
+  function buildingScreenAnchor(building){
+    if(!building) return null;
+    const rect = viewport.getBoundingClientRect();
+    const x = rect.left + (building.bbox.x + building.bbox.w/2 - originX) * scale;
+    const yBottom = rect.top + (building.bbox.y + building.bbox.h - originY) * scale;
+    return { x, y: yBottom };
+  }
+
+  /* Generic drag-anywhere-on-element helper — ported from the grid page.
+     Distinguishes a click (small total movement) from a real drag, and
+     stops propagation so dragging a panel never also pans the map
+     underneath it. */
+  function makeDraggable(el, opts = {}){
+    let dragActive = false, startX = 0, startY = 0, origLeft = 0, origTop = 0, moved = 0, downTarget = null;
+
+    el.addEventListener('pointerdown', (e) => {
+      if(opts.ignoreSelector && e.target.closest(opts.ignoreSelector)) return;
+      e.stopPropagation();
+      dragActive = true; moved = 0; downTarget = e.target;
+      el.setPointerCapture(e.pointerId);
+      const rect = el.getBoundingClientRect();
+      origLeft = rect.left; origTop = rect.top;
+      startX = e.clientX; startY = e.clientY;
+      el.style.left = origLeft + 'px';
+      el.style.top = origTop + 'px';
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+      el.style.transform = 'none';
+    });
+    el.addEventListener('pointermove', (e) => {
+      if(!dragActive) return;
+      e.stopPropagation();
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      moved = Math.max(moved, Math.hypot(dx, dy));
+      el.style.left = (origLeft + dx) + 'px';
+      el.style.top = (origTop + dy) + 'px';
+      updateLeaderFor(el);
+    });
+    el.addEventListener('pointerup', (e) => {
+      if(!dragActive) return;
+      dragActive = false;
+      e.stopPropagation();
+      if(moved < 6 && opts.onClick) opts.onClick(downTarget, e);
+    });
+  }
+
+  function resetPhotosPosition(){
+    isolatePhotosEl.style.left = 'auto';
+    isolatePhotosEl.style.right = '5%';
+    isolatePhotosEl.style.top = '50%';
+    isolatePhotosEl.style.bottom = 'auto';
+    isolatePhotosEl.style.transform = 'translateY(-50%)';
+  }
+  function resetFacadePosition(){
+    isolateFacadeEl.style.left = '8%';
+    isolateFacadeEl.style.right = 'auto';
+    isolateFacadeEl.style.top = '10%';
+    isolateFacadeEl.style.bottom = 'auto';
+    isolateFacadeEl.style.transform = 'none';
+  }
+  function resetObjectPosition(){
+    isolateObjectEl.style.left = '8%';
+    isolateObjectEl.style.right = 'auto';
+    isolateObjectEl.style.bottom = '8%';
+    isolateObjectEl.style.top = 'auto';
+    isolateObjectEl.style.transform = 'none';
+  }
+
+  makeDraggable(isolatePhotosEl, {
+    onClick: (target) => {
+      const tile = target.closest('.photo-tile');
+      if(!tile) return;
+      const card = document.createElement('div');
+      card.className = 'enlarged-photo';
+      const rect = tile.getBoundingClientRect();
+      card.style.left = (rect.left - 60) + 'px';
+      card.style.top = (rect.top - 30) + 'px';
+      card.innerHTML = `<button class="enlarged-close">&times;</button><span>Photo ${tile.textContent.trim()}</span>`;
+      document.body.appendChild(card);
+      card.querySelector('.enlarged-close').addEventListener('click', () => card.remove());
+    }
+  });
+
+  /* ---------------- FACADE ELEVATION — same procedural generator (no
+     triangles) as the grid page, ported here. Bay/flank windows are
+     tagged .facade-window so clicking one can surface the building's
+     placeholder 3D object. ---------------- */
+  function buildFacadeMarkup(p){
+    const bx = 30, bw = 140, bTop = 30, bBottom = 240, groundTop = 168;
+    const corniceH = 12;
+    let out = '';
+    out += `<line x1="10" y1="240" x2="190" y2="240" stroke="currentColor" stroke-width="1" opacity="0.6"/>`;
+    out += `<rect x="${bx}" y="${bTop}" width="${bw}" height="${bBottom-bTop}" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.85"/>`;
+    out += `<rect x="${bx-4}" y="${bTop-corniceH+8}" width="${bw+8}" height="${corniceH}" fill="none" stroke="currentColor" stroke-width="1" opacity="0.7"/>`;
+
+    const floorsTop = bTop + corniceH + 4;
+    const floorH = (groundTop - floorsTop) / p.floors;
+    const gap = bw / p.bays;
+    const winW = gap * 0.6;
+
+    for(let f=0; f<p.floors; f++){
+      const rowTop = floorsTop + f*floorH;
+      if(f > 0){
+        out += `<line x1="${bx}" y1="${rowTop.toFixed(1)}" x2="${bx+bw}" y2="${rowTop.toFixed(1)}" stroke="currentColor" stroke-width="0.6" opacity="0.4"/>`;
+      }
+      const winY = rowTop + floorH*0.12;
+      const winH = floorH*0.68;
+      for(let b=0; b<p.bays; b++){
+        const wx = bx + gap*b + (gap-winW)/2;
+        out += `<rect class="facade-window" fill="none" x="${wx.toFixed(1)}" y="${winY.toFixed(1)}" width="${winW.toFixed(1)}" height="${winH.toFixed(1)}" stroke="currentColor" stroke-width="1"/>`;
+      }
+    }
+
+    function flankWindow(x, arched){
+      return arched
+        ? `<path class="facade-window" fill="none" d="M${x} 210 L${x} 168 A14 14 0 0 1 ${x+28} 168 L${x+28} 210 Z" stroke="currentColor" stroke-width="1.1"/>`
+        : `<rect class="facade-window" fill="none" x="${x}" y="168" width="28" height="42" stroke="currentColor" stroke-width="1.1"/>`;
+    }
+    out += flankWindow(46, p.groundArched);
+    out += flankWindow(126, p.groundArched);
+    out += `<rect x="88" y="180" width="24" height="60" fill="none" stroke="currentColor" stroke-width="1.2"/>`;
+    out += `<line x1="88" y1="180" x2="112" y2="180" stroke="currentColor" stroke-width="1"/>`;
+
+    return out;
+  }
+
+  makeDraggable(isolateFacadeEl, {
+    onClick: (target) => {
+      const win = target.closest('.facade-window');
+      if(win) showObjectPanel(win);
+    }
+  });
+
+  /* ---------------- PLACEHOLDER 3D OBJECT — one per building, summoned by
+     clicking any window on its facade. Plain rotating placeholder geometry,
+     same shape set as the grid page, no orbit controls (this is a small
+     fixed preview, not an interactive viewer). ---------------- */
+  const placeholderGeoms = [
+    new THREE.BoxGeometry(1.5, 1.5, 1.5),
+    new THREE.IcosahedronGeometry(1.05, 0),
+    new THREE.TorusGeometry(0.85, 0.34, 16, 40),
+    new THREE.ConeGeometry(0.95, 1.5, 24),
+    new THREE.SphereGeometry(1.0, 24, 18)
+  ];
+  let objRenderer = null, objScene = null, objCamera = null, objMesh = null, objAnimRunning = false;
+
+  function ensureObjectRenderer(){
+    if(objRenderer) return;
+    const objCanvas = document.getElementById('object-canvas');
+    objRenderer = new THREE.WebGLRenderer({ canvas: objCanvas, antialias:true, alpha:true });
+    objRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    objRenderer.setSize(170, 170, false);
+    objScene = new THREE.Scene();
+    objCamera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+    objCamera.position.set(0, 0, 4.2);
+    objScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const key = new THREE.DirectionalLight(0xffffff, 0.9);
+    key.position.set(2, 3, 4);
+    objScene.add(key);
+  }
+
+  function animateObject(){
+    if(!objAnimRunning) return;
+    requestAnimationFrame(animateObject);
+    if(objMesh){ objMesh.rotation.x += 0.006; objMesh.rotation.y += 0.01; }
+    objRenderer.render(objScene, objCamera);
+  }
+
+  function showObjectPanel(windowEl){
+    ensureObjectRenderer();
+    if(objMesh){ objScene.remove(objMesh); objMesh.geometry.dispose(); objMesh.material.dispose(); }
+    const mat = new THREE.MeshStandardMaterial({ color:0x0A0A0A, roughness:0.55, metalness:0.08 });
+    objMesh = new THREE.Mesh(placeholderGeoms[selectedBuilding.shapeIndex], mat);
+    objScene.add(objMesh);
+
+    resetObjectPosition();
+    isolateObjectEl.classList.add('show');
+    registerLeader(isolateObjectEl, () => {
+      const r = windowEl.getBoundingClientRect();
+      return { x: r.left + r.width/2, y: r.top + r.height/2 };
+    });
+
+    if(!objAnimRunning){ objAnimRunning = true; animateObject(); }
+  }
+  function hideObjectPanel(){
+    isolateObjectEl.classList.remove('show');
+    unregisterLeader(isolateObjectEl);
+    objAnimRunning = false;
+  }
+  document.getElementById('object-close').addEventListener('click', hideObjectPanel);
+  makeDraggable(isolateObjectEl, { ignoreSelector: '.enlarged-close' });
+
+  function updateIsolateInfo(){
+    const isSelected = !!selectedBuilding;
+    isolateAddressEl.classList.toggle('show', isSelected);
+
+    if(isSelected){
+      isolateAddressTextEl.textContent = selectedBuilding.address;
+      resetPhotosPosition();
+      isolatePhotosEl.classList.add('show');
+      registerLeader(isolatePhotosEl, () => buildingScreenAnchor(selectedBuilding));
+
+      resetFacadePosition();
+      facadeSvgEl.innerHTML = buildFacadeMarkup(selectedBuilding.facade);
+      isolateFacadeEl.classList.add('show');
+      registerLeader(isolateFacadeEl, () => buildingScreenAnchor(selectedBuilding));
+    } else {
+      isolatePhotosEl.classList.remove('show');
+      unregisterLeader(isolatePhotosEl);
+      isolateFacadeEl.classList.remove('show');
+      unregisterLeader(isolateFacadeEl);
+      hideObjectPanel();
+      document.querySelectorAll('.enlarged-photo').forEach(el => el.remove());
+    }
+  }
 
   let dpr = Math.min(window.devicePixelRatio || 1, 3);
   let rawSvgText = null;
@@ -88,6 +514,92 @@
   let lastCrisp = null; // { canvas, srcX, srcY, srcW, srcH }
   let refreshTimer = null;
   let dragging = false;
+
+  /* ---------------- SELECTABLE PINK BUILDINGS -------------------------
+     The only actually-filled shapes in the map (everything else is
+     stroke-only, fill="none") are a small set of pink (#FFBFBF fill)
+     polygons, each paired with a thin red (#BF3F3F) outline path at the
+     same location. Grouped by proximity into "buildings" so a building
+     drawn as several small paths still selects as one unit. */
+  let buildings = [];
+  let selectedBuilding = null;
+
+  // Detached-but-attached host used purely for SVG geometry queries
+  // (getBBox / isPointInFill need real layout, even if never painted).
+  const geomHost = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  geomHost.style.position = 'absolute';
+  geomHost.style.left = '-99999px';
+  geomHost.style.width = '1px';
+  geomHost.style.height = '1px';
+  document.body.appendChild(geomHost);
+
+  function extractBuildings(svgText){
+    const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
+    const all = [
+      ...doc.querySelectorAll('path[fill="#FFBFBF"]'),
+      ...doc.querySelectorAll('path[stroke="#BF3F3F"]')
+    ];
+
+    const infos = all.map(el => {
+      const clone = el.cloneNode();
+      geomHost.appendChild(clone);
+      const b = clone.getBBox();
+      geomHost.removeChild(clone);
+      return { el, x:b.x, y:b.y, w:b.width, h:b.height, cx:b.x+b.width/2, cy:b.y+b.height/2 };
+    });
+
+    // union-find clustering by center-point proximity — this only needs to
+    // pair each fill path with its near-coincident stroke-outline twin, not
+    // group separate buildings together, so the threshold stays tight.
+    // (A looser threshold chains through closely-spaced points and merges
+    // adjacent-but-distinct buildings into one — verified empirically: 1.0
+    // gives exactly 30 clean pairs, 1.5+ starts cross-contaminating.)
+    const THRESH = 1.2;
+    const parent = infos.map((_,i)=>i);
+    function find(i){ while(parent[i]!==i){ parent[i]=parent[parent[i]]; i=parent[i]; } return i; }
+    function union(a,b){ const ra=find(a), rb=find(b); if(ra!==rb) parent[ra]=rb; }
+    for(let i=0;i<infos.length;i++){
+      for(let j=i+1;j<infos.length;j++){
+        if(Math.hypot(infos[i].cx-infos[j].cx, infos[i].cy-infos[j].cy) < THRESH) union(i,j);
+      }
+    }
+    const groups = {};
+    infos.forEach((info,i) => { const r = find(i); (groups[r] = groups[r] || []).push(info); });
+
+    buildings = Object.values(groups).map((members, idx) => {
+      const x0 = Math.min(...members.map(m=>m.x)), y0 = Math.min(...members.map(m=>m.y));
+      const x1 = Math.max(...members.map(m=>m.x+m.w)), y1 = Math.max(...members.map(m=>m.y+m.h));
+      const hitEls = members.map(m => {
+        const clone = m.el.cloneNode();
+        geomHost.appendChild(clone);
+        return clone;
+      });
+      return {
+        id: idx,
+        markup: members.map(m => m.el.outerHTML).join(''),
+        bbox: { x:x0, y:y0, w:x1-x0, h:y1-y0 },
+        hitEls,
+        address: ADDRESSES[Math.floor(Math.random() * ADDRESSES.length)],
+        facade: {
+          floors: 2 + Math.floor(Math.random() * 3),
+          bays: 2 + Math.floor(Math.random() * 3),
+          groundArched: Math.random() < 0.5
+        },
+        shapeIndex: Math.floor(Math.random() * 5)
+      };
+    });
+  }
+
+  function hitTestBuilding(svgX, svgY){
+    const pt = new DOMPoint(svgX, svgY);
+    for(const b of buildings){
+      if(svgX < b.bbox.x-1 || svgX > b.bbox.x+b.bbox.w+1 || svgY < b.bbox.y-1 || svgY > b.bbox.y+b.bbox.h+1) continue;
+      for(const el of b.hitEls){
+        try{ if(el.isPointInFill(pt)) return b; } catch(e){}
+      }
+    }
+    return null;
+  }
 
   function resizeCanvas(){
     canvas.width = Math.round(viewport.clientWidth * dpr);
@@ -139,8 +651,32 @@
     refreshTimer = setTimeout(doCrispRefresh, delay);
   }
 
-  function doCrispRefresh(){
+  // doCrispRefresh is async (SVG decode is async, and selection adds a
+  // second decode for the highlight overlay) — two calls can overlap and
+  // resolve out of order. Each call captures its own sequence number and
+  // bails before touching the canvas if a newer call has since started.
+  let refreshSeq = 0;
+
+  function loadSvgAsImage(svgText){
+    // img.decode() (not onload) guarantees the image is FULLY rasterized and
+    // safe to draw synchronously afterward — for a huge/complex SVG like this
+    // one, onload can fire before rasterization is actually complete, and
+    // revoking the blob URL that early was causing the later drawImage to
+    // pull a broken/partial decode (reproduced as stale-looking content after
+    // rapid zoom changes). Revoke only after decode() resolves.
+    const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.src = url;
+    return img.decode().then(
+      () => { URL.revokeObjectURL(url); return img; },
+      (e) => { URL.revokeObjectURL(url); throw e; }
+    );
+  }
+
+  async function doCrispRefresh(){
     if(!rawSvgText) return;
+    const mySeq = ++refreshSeq;
     const { srcX, srcY, srcW, srcH, vw, vh } = currentViewRect();
     const destW = Math.max(1, Math.round(vw * dpr));
     const destH = Math.max(1, Math.round(vh * dpr));
@@ -153,27 +689,36 @@
       return `<svg${cleaned} viewBox="${srcX} ${srcY} ${srcW} ${srcH}" width="${destW}" height="${destH}">`;
     });
 
-    const blob = new Blob([cropped], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = () => {
+    try{
+      const baseImg = await loadSvgAsImage(cropped);
+
       const off = document.createElement('canvas');
       off.width = destW; off.height = destH;
       const octx = off.getContext('2d');
-      octx.drawImage(img, 0, 0, destW, destH);
-      URL.revokeObjectURL(url);
+      octx.drawImage(baseImg, 0, 0, destW, destH);
+
+      if(selectedBuilding){
+        // Fade everything to near-white, then redraw just the selected
+        // building's own paths (same crop/scale) on top at full color —
+        // it reads as "isolated" against the faded rest of the map.
+        octx.fillStyle = 'rgba(255,255,255,0.88)';
+        octx.fillRect(0, 0, destW, destH);
+        const hlSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${srcX} ${srcY} ${srcW} ${srcH}" width="${destW}" height="${destH}">${selectedBuilding.markup}</svg>`;
+        const hlImg = await loadSvgAsImage(hlSvg);
+        octx.drawImage(hlImg, 0, 0, destW, destH);
+      }
+
+      if(mySeq !== refreshSeq) return; // a newer refresh started while we were decoding — discard
 
       lastCrisp = { canvas: off, srcX, srcY, srcW, srcH };
-      // Only draw it if the view hasn't moved on since this refresh was requested
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, vw, vh); // the new crop is often partly transparent (unpainted map margins) — without this, the previous render bleeds through underneath
       ctx.drawImage(off, 0, 0, vw, vh);
       statusEl.textContent = `${Math.round(scale * 100) / 100}x`;
       loadingEl.classList.add('hidden');
-    };
-    img.onerror = () => {
-      console.error('Crisp refresh failed to decode SVG crop');
-    };
-    img.src = url;
+    } catch(e){
+      console.error('Crisp refresh failed to decode SVG crop', e);
+    }
   }
 
   fetch('map.svg')
@@ -188,6 +733,7 @@
         mapW = parts[2]; mapH = parts[3];
       }
       rawSvgText = svgText;
+      extractBuildings(svgText);
       resizeCanvas();
       fitToScreen();
     })
@@ -215,15 +761,17 @@
     scale = newScale;
 
     cheapDraw();
+    updateAllLeaders();
     scheduleCrispRefresh(false);
   }, { passive:false });
 
-  /* ---------------- PAN (drag) ---------------- */
-  let lastX = 0, lastY = 0;
+  /* ---------------- PAN (drag) + CLICK-TO-SELECT ---------------- */
+  let lastX = 0, lastY = 0, downX = 0, downY = 0;
   viewport.addEventListener('pointerdown', (e) => {
     dragging = true;
     viewport.classList.add('dragging');
     lastX = e.clientX; lastY = e.clientY;
+    downX = e.clientX; downY = e.clientY;
   });
   window.addEventListener('pointermove', (e) => {
     if(!dragging) return;
@@ -232,13 +780,24 @@
     originX -= dx / scale;
     originY -= dy / scale;
     cheapDraw();
+    updateAllLeaders();
   });
-  window.addEventListener('pointerup', () => {
-    if(dragging){ dragging = false; viewport.classList.remove('dragging'); scheduleCrispRefresh(false); }
+  window.addEventListener('pointerup', (e) => {
+    if(!dragging) return;
+    dragging = false;
+    viewport.classList.remove('dragging');
+    const totalMoved = Math.hypot(e.clientX - downX, e.clientY - downY);
+    if(totalMoved < 6){
+      const rect = viewport.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const svgX = originX + mx / scale, svgY = originY + my / scale;
+      selectedBuilding = hitTestBuilding(svgX, svgY);
+      updateIsolateInfo();
+    }
+    scheduleCrispRefresh(true);
   });
 
   window.addEventListener('resize', () => { resizeCanvas(); fitToScreen(); });
-  window.addEventListener('dblclick', fitToScreen);
 </script>
 </body>
 </html>
